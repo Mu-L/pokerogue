@@ -4,8 +4,8 @@ import { addTextObject, TextStyle } from "./text";
 import PartyUiHandler, { PartyUiMode } from "./party-ui-handler";
 import { Mode } from "./ui";
 import UiHandler from "./ui-handler";
-import i18next from "../plugins/i18n";
-import {Button} from "../enums/buttons";
+import i18next from "i18next";
+import {Button} from "#enums/buttons";
 
 export enum Command {
   FIGHT = 0,
@@ -27,19 +27,21 @@ export default class CommandUiHandler extends UiHandler {
 
   setup() {
     const ui = this.getUi();
-    const commands = [ 
-      i18next.t("commandUiHandler:fight"), 
-      i18next.t("commandUiHandler:ball"), 
-      i18next.t("commandUiHandler:pokemon"), 
-      i18next.t("commandUiHandler:run") 
+    const commands = [
+      i18next.t("commandUiHandler:fight"),
+      i18next.t("commandUiHandler:ball"),
+      i18next.t("commandUiHandler:pokemon"),
+      i18next.t("commandUiHandler:run")
     ];
 
-    this.commandsContainer = this.scene.add.container(216, -38.7);
+    this.commandsContainer = this.scene.add.container(217, -38.7);
+    this.commandsContainer.setName("commands");
     this.commandsContainer.setVisible(false);
     ui.add(this.commandsContainer);
 
     for (let c = 0; c < commands.length; c++) {
       const commandText = addTextObject(this.scene, c % 2 === 0 ? 0 : 55.8, c < 2 ? 0 : 16, commands[c], TextStyle.WINDOW);
+      commandText.setName(commands[c]);
       this.commandsContainer.add(commandText);
     }
   }
@@ -60,6 +62,7 @@ export default class CommandUiHandler extends UiHandler {
     }
 
     const messageHandler = this.getUi().getMessageHandler();
+    messageHandler.bg.setVisible(true);
     messageHandler.commandWindow.setVisible(true);
     messageHandler.movesWindowContainer.setVisible(false);
     messageHandler.message.setWordWrapWidth(1110);
@@ -77,7 +80,7 @@ export default class CommandUiHandler extends UiHandler {
     const cursor = this.getCursor();
 
     if (button === Button.CANCEL || button === Button.ACTION) {
-      
+
       if (button === Button.ACTION) {
         switch (cursor) {
         // Fight

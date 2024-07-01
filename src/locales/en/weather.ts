@@ -1,4 +1,4 @@
-import { SimpleTranslationEntries } from "#app/plugins/i18n";
+import { SimpleTranslationEntries } from "#app/interfaces/locales";
 
 /**
  * The weather namespace holds text displayed when weather is active during a battle
@@ -15,12 +15,12 @@ export const weather: SimpleTranslationEntries = {
   "sandstormStartMessage": "A sandstorm brewed!",
   "sandstormLapseMessage": "The sandstorm rages.",
   "sandstormClearMessage": "The sandstorm subsided.",
-  "sandstormDamageMessage": "{{pokemonPrefix}}{{pokemonName}} is buffeted\nby the sandstorm!",
+  "sandstormDamageMessage": "{{pokemonNameWithAffix}} is buffeted\nby the sandstorm!",
 
   "hailStartMessage": "It started to hail!",
   "hailLapseMessage": "Hail continues to fall.",
   "hailClearMessage": "The hail stopped.",
-  "hailDamageMessage": "{{pokemonPrefix}}{{pokemonName}} is pelted\nby the hail!",
+  "hailDamageMessage": "{{pokemonNameWithAffix}} is pelted\nby the hail!",
 
   "snowStartMessage": "It started to snow!",
   "snowLapseMessage": "The snow is falling down.",
@@ -33,7 +33,7 @@ export const weather: SimpleTranslationEntries = {
   "heavyRainStartMessage": "A heavy downpour started!",
   "heavyRainLapseMessage": "The heavy downpour continues.",
   "heavyRainClearMessage": "The heavy rain stopped.",
-    
+
   "harshSunStartMessage": "The sunlight got hot!",
   "harshSunLapseMessage": "The sun is scorching hot.",
   "harshSunClearMessage": "The harsh sunlight faded.",

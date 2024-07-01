@@ -1,4 +1,4 @@
-import { PokemonInfoTranslationEntries } from "#app/plugins/i18n";
+import { PokemonInfoTranslationEntries } from "#app/interfaces/locales";
 
 export const pokemonInfo: PokemonInfoTranslationEntries = {
   Stat: {
@@ -13,29 +13,31 @@ export const pokemonInfo: PokemonInfoTranslationEntries = {
     "SPDEF": "特殊防禦",
     "SPDEFshortened": "特防",
     "SPD": "速度",
-    "SPDshortened": "速度"
+    "SPDshortened": "速度",
+    "ACC": "Accuracy",
+    "EVA": "Evasiveness"
   },
 
   Type: {
-    "UNKNOWN": "未知", 
-    "NORMAL": "一般", 
-    "FIGHTING": "格鬥", 
-    "FLYING": "飛行", 
-    "POISON": "毒", 
-    "GROUND": "地面", 
-    "ROCK": "岩石", 
-    "BUG": "蟲", 
-    "GHOST": "幽靈", 
-    "STEEL": "鋼", 
-    "FIRE": "火", 
-    "WATER": "水", 
-    "GRASS": "草", 
-    "ELECTRIC": "電", 
-    "PSYCHIC": "超能力", 
-    "ICE": "冰", 
-    "DRAGON": "龍", 
-    "DARK": "惡", 
-    "FAIRY": "妖精", 
+    "UNKNOWN": "未知",
+    "NORMAL": "一般",
+    "FIGHTING": "格鬥",
+    "FLYING": "飛行",
+    "POISON": "毒",
+    "GROUND": "地面",
+    "ROCK": "岩石",
+    "BUG": "蟲",
+    "GHOST": "幽靈",
+    "STEEL": "鋼",
+    "FIRE": "火",
+    "WATER": "水",
+    "GRASS": "草",
+    "ELECTRIC": "電",
+    "PSYCHIC": "超能力",
+    "ICE": "冰",
+    "DRAGON": "龍",
+    "DARK": "惡",
+    "FAIRY": "妖精",
     "STELLAR": "星晶"
   },
 } as const;

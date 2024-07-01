@@ -5,7 +5,7 @@ import Pokemon from "../field/pokemon";
 import * as Utils from "../utils";
 import { BattlerIndex } from "../battle";
 import { Element } from "json-stable-stringify";
-import { Moves } from "./enums/moves";
+import { Moves } from "#enums/moves";
 //import fs from 'vite-plugin-fs/browser';
 
 export enum AnimFrameTarget {
@@ -296,7 +296,7 @@ class ImportedAnimFrame extends AnimFrame {
 abstract class AnimTimedEvent {
   public frameIndex: integer;
   public resourceName: string;
-    
+
   constructor(frameIndex: integer, resourceName: string) {
     this.frameIndex = frameIndex;
     this.resourceName = resourceName;
@@ -310,7 +310,7 @@ abstract class AnimTimedEvent {
 class AnimTimedSoundEvent extends AnimTimedEvent {
   public volume: number = 100;
   public pitch: number = 100;
-    
+
   constructor(frameIndex: integer, resourceName: string, source?: any) {
     super(frameIndex, resourceName);
 
@@ -468,7 +468,7 @@ export function initMoveAnim(scene: BattleScene, move: Moves): Promise<void> {
       } else {
         const loadedCheckTimer = setInterval(() => {
           if (moveAnims.get(move) !== null) {
-            const chargeAttr = allMoves[move].getAttrs(ChargeAttr).find(() => true) as ChargeAttr || allMoves[move].getAttrs(DelayedAttackAttr).find(() => true) as DelayedAttackAttr;
+            const chargeAttr = allMoves[move].getAttrs(ChargeAttr)[0] || allMoves[move].getAttrs(DelayedAttackAttr)[0];
             if (chargeAttr && chargeAnims.get(chargeAttr.chargeAnim) === null) {
               return;
             }
@@ -498,7 +498,7 @@ export function initMoveAnim(scene: BattleScene, move: Moves): Promise<void> {
             } else {
               populateMoveAnim(move, ba);
             }
-            const chargeAttr = allMoves[move].getAttrs(ChargeAttr).find(() => true) as ChargeAttr || allMoves[move].getAttrs(DelayedAttackAttr).find(() => true) as DelayedAttackAttr;
+            const chargeAttr = allMoves[move].getAttrs(ChargeAttr)[0] || allMoves[move].getAttrs(DelayedAttackAttr)[0];
             if (chargeAttr) {
               initMoveChargeAnim(scene, chargeAttr.chargeAnim).then(() => resolve());
             } else {
@@ -569,7 +569,7 @@ export function loadMoveAnimAssets(scene: BattleScene, moveIds: Moves[], startLo
   return new Promise(resolve => {
     const moveAnimations = moveIds.map(m => moveAnims.get(m) as AnimConfig).flat();
     for (const moveId of moveIds) {
-      const chargeAttr = allMoves[moveId].getAttrs(ChargeAttr).find(() => true) as ChargeAttr || allMoves[moveId].getAttrs(DelayedAttackAttr).find(() => true) as DelayedAttackAttr;
+      const chargeAttr = allMoves[moveId].getAttrs(ChargeAttr)[0] || allMoves[moveId].getAttrs(DelayedAttackAttr)[0];
       if (chargeAttr) {
         const moveChargeAnims = chargeAnims.get(chargeAttr.chargeAnim);
         moveAnimations.push(moveChargeAnims instanceof AnimConfig ? moveChargeAnims : moveChargeAnims[0]);
@@ -813,7 +813,7 @@ export abstract class BattleAnim {
 
       this.srcLine = [ userFocusX, userFocusY, targetFocusX, targetFocusY ];
       this.dstLine = [ userInitialX, userInitialY, targetInitialX, targetInitialY ];
-        
+
       let r = anim.frames.length;
       let f = 0;
 
@@ -855,7 +855,7 @@ export abstract class BattleAnim {
               const pokemonSprite = sprites[spriteIndex];
               const graphicFrameData = frameData.get(frame.target).get(spriteIndex);
               pokemonSprite.setPosition(graphicFrameData.x, graphicFrameData.y - ((spriteSource.height / 2) * (spriteSource.parentContainer.scale - 1)));
-                        
+
               pokemonSprite.setAngle(graphicFrameData.angle);
               pokemonSprite.setScale(graphicFrameData.scaleX * spriteSource.parentContainer.scale,  graphicFrameData.scaleY * spriteSource.parentContainer.scale);
 
@@ -873,7 +873,7 @@ export abstract class BattleAnim {
                 scene.field.add(newSprite);
                 spritePriorities.push(1);
               }
-                        
+
               const graphicIndex = g++;
               const moveSprite = sprites[graphicIndex];
               if (spritePriorities[graphicIndex] !== frame.priority) {
@@ -924,7 +924,7 @@ export abstract class BattleAnim {
               }
               moveSprite.setFrame(frame.graphicFrame);
               //console.log(AnimFocus[frame.focus]);
-                        
+
               const graphicFrameData = frameData.get(frame.target).get(graphicIndex);
               moveSprite.setPosition(graphicFrameData.x, graphicFrameData.y);
               moveSprite.setAngle(graphicFrameData.angle);
@@ -999,7 +999,7 @@ export class CommonBattleAnim extends BattleAnim {
 
 export class MoveAnim extends BattleAnim {
   public move: Moves;
-    
+
   constructor(move: Moves, user: Pokemon, target: BattlerIndex) {
     super(user, user.scene.getField()[target]);
 
@@ -1027,7 +1027,7 @@ export class MoveAnim extends BattleAnim {
 
 export class MoveChargeAnim extends MoveAnim {
   private chargeAnim: ChargeAnim;
-    
+
   constructor(chargeAnim: ChargeAnim, move: Moves, user: Pokemon) {
     super(move, user, 0);
 
@@ -1060,13 +1060,13 @@ export async function populateAnims() {
   }
 
   const seNames = [];//(await fs.readdir('./public/audio/se/battle_anims/')).map(se => se.toString());
-    
+
   const animsData = [];//battleAnimRawData.split('!ruby/array:PBAnimation').slice(1);
   for (let a = 0; a < animsData.length; a++) {
     const fields = animsData[a].split("@").slice(1);
 
     const nameField = fields.find(f => f.startsWith("name: "));
-        
+
     let isOppMove: boolean;
     let commonAnimId: CommonAnim;
     let chargeAnimId: ChargeAnim;

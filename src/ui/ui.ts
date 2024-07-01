@@ -1,4 +1,4 @@
-import { default as BattleScene } from "../battle-scene";
+import {default as BattleScene} from "../battle-scene";
 import UiHandler from "./ui-handler";
 import BattleMessageUiHandler from "./battle-message-ui-handler";
 import CommandUiHandler from "./command-ui-handler";
@@ -12,17 +12,19 @@ import SummaryUiHandler from "./summary-ui-handler";
 import StarterSelectUiHandler from "./starter-select-ui-handler";
 import EvolutionSceneHandler from "./evolution-scene-handler";
 import TargetSelectUiHandler from "./target-select-ui-handler";
-import SettingsUiHandler from "./settings-ui-handler";
+import SettingsUiHandler from "./settings/settings-ui-handler";
+import SettingsGamepadUiHandler from "./settings/settings-gamepad-ui-handler";
+import GameChallengesUiHandler from "./challenges-select-ui-handler";
 import { TextStyle, addTextObject } from "./text";
 import AchvBar from "./achv-bar";
 import MenuUiHandler from "./menu-ui-handler";
 import AchvsUiHandler from "./achvs-ui-handler";
-import OptionSelectUiHandler from "./option-select-ui-handler";
+import OptionSelectUiHandler from "./settings/option-select-ui-handler";
 import EggHatchSceneHandler from "./egg-hatch-scene-handler";
 import EggListUiHandler from "./egg-list-ui-handler";
 import EggGachaUiHandler from "./egg-gacha-ui-handler";
 import VouchersUiHandler from "./vouchers-ui-handler";
-import { addWindow } from "./ui-theme";
+import {addWindow} from "./ui-theme";
 import LoginFormUiHandler from "./login-form-ui-handler";
 import RegistrationFormUiHandler from "./registration-form-ui-handler";
 import LoadingModalUiHandler from "./loading-modal-ui-handler";
@@ -35,7 +37,15 @@ import SavingIconHandler from "./saving-icon-handler";
 import UnavailableModalUiHandler from "./unavailable-modal-ui-handler";
 import OutdatedModalUiHandler from "./outdated-modal-ui-handler";
 import SessionReloadModalUiHandler from "./session-reload-modal-ui-handler";
-import {Button} from "../enums/buttons";
+import {Button} from "#enums/buttons";
+import i18next, {ParseKeys} from "i18next";
+import GamepadBindingUiHandler from "./settings/gamepad-binding-ui-handler";
+import SettingsKeyboardUiHandler from "#app/ui/settings/settings-keyboard-ui-handler";
+import KeyboardBindingUiHandler from "#app/ui/settings/keyboard-binding-ui-handler";
+import SettingsDisplayUiHandler from "./settings/settings-display-ui-handler";
+import SettingsAudioUiHandler from "./settings/settings-audio-ui-handler";
+import { PlayerGender } from "#enums/player-gender";
+import BgmBar from "#app/ui/bgm-bar";
 
 export enum Mode {
   MESSAGE,
@@ -56,6 +66,12 @@ export enum Mode {
   MENU,
   MENU_OPTION_SELECT,
   SETTINGS,
+  SETTINGS_DISPLAY,
+  SETTINGS_AUDIO,
+  SETTINGS_GAMEPAD,
+  GAMEPAD_BINDING,
+  SETTINGS_KEYBOARD,
+  KEYBOARD_BINDING,
   ACHIEVEMENTS,
   GAME_STATS,
   VOUCHERS,
@@ -66,7 +82,8 @@ export enum Mode {
   LOADING,
   SESSION_RELOAD,
   UNAVAILABLE,
-  OUTDATED
+  OUTDATED,
+  CHALLENGE_SELECT
 }
 
 const transitionModes = [
@@ -77,7 +94,8 @@ const transitionModes = [
   Mode.EVOLUTION_SCENE,
   Mode.EGG_HATCH_SCENE,
   Mode.EGG_LIST,
-  Mode.EGG_GACHA
+  Mode.EGG_GACHA,
+  Mode.CHALLENGE_SELECT
 ];
 
 const noTransitionModes = [
@@ -86,7 +104,13 @@ const noTransitionModes = [
   Mode.OPTION_SELECT,
   Mode.MENU,
   Mode.MENU_OPTION_SELECT,
+  Mode.GAMEPAD_BINDING,
+  Mode.KEYBOARD_BINDING,
   Mode.SETTINGS,
+  Mode.SETTINGS_AUDIO,
+  Mode.SETTINGS_DISPLAY,
+  Mode.SETTINGS_GAMEPAD,
+  Mode.SETTINGS_KEYBOARD,
   Mode.ACHIEVEMENTS,
   Mode.GAME_STATS,
   Mode.VOUCHERS,
@@ -101,16 +125,17 @@ const noTransitionModes = [
 export default class UI extends Phaser.GameObjects.Container {
   private mode: Mode;
   private modeChain: Mode[];
-  private handlers: UiHandler[];
+  public handlers: UiHandler[];
   private overlay: Phaser.GameObjects.Rectangle;
   public achvBar: AchvBar;
+  public bgmBar: BgmBar;
   public savingIcon: SavingIconHandler;
 
   private tooltipContainer: Phaser.GameObjects.Container;
   private tooltipBg: Phaser.GameObjects.NineSlice;
   private tooltipTitle: Phaser.GameObjects.Text;
   private tooltipContent: Phaser.GameObjects.Text;
-  
+
   private overlayActive: boolean;
 
   constructor(scene: BattleScene) {
@@ -136,7 +161,14 @@ export default class UI extends Phaser.GameObjects.Container {
       new OptionSelectUiHandler(scene),
       new MenuUiHandler(scene),
       new OptionSelectUiHandler(scene, Mode.MENU_OPTION_SELECT),
+      // settings
       new SettingsUiHandler(scene),
+      new SettingsDisplayUiHandler(scene),
+      new SettingsAudioUiHandler(scene),
+      new SettingsGamepadUiHandler(scene),
+      new GamepadBindingUiHandler(scene),
+      new SettingsKeyboardUiHandler(scene),
+      new KeyboardBindingUiHandler(scene),
       new AchvsUiHandler(scene),
       new GameStatsUiHandler(scene),
       new VouchersUiHandler(scene),
@@ -147,15 +179,18 @@ export default class UI extends Phaser.GameObjects.Container {
       new LoadingModalUiHandler(scene),
       new SessionReloadModalUiHandler(scene),
       new UnavailableModalUiHandler(scene),
-      new OutdatedModalUiHandler(scene)
+      new OutdatedModalUiHandler(scene),
+      new GameChallengesUiHandler(scene)
     ];
   }
 
   setup(): void {
+    this.setName(`ui-${Mode[this.mode]}`);
     for (const handler of this.handlers) {
       handler.setup();
     }
     this.overlay = this.scene.add.rectangle(0, 0, this.scene.game.canvas.width / 6, this.scene.game.canvas.height / 6, 0);
+    this.overlay.setName("rect-ui-overlay");
     this.overlay.setOrigin(0, 0);
     (this.scene as BattleScene).uiContainer.add(this.overlay);
     this.overlay.setVisible(false);
@@ -163,7 +198,7 @@ export default class UI extends Phaser.GameObjects.Container {
 
     this.achvBar = new AchvBar(this.scene as BattleScene);
     this.achvBar.setup();
-   
+
     (this.scene as BattleScene).uiContainer.add(this.achvBar);
 
     this.savingIcon = new SavingIconHandler(this.scene as BattleScene);
@@ -174,15 +209,19 @@ export default class UI extends Phaser.GameObjects.Container {
 
   private setupTooltip() {
     this.tooltipContainer = this.scene.add.container(0, 0);
+    this.tooltipContainer.setName("tooltip");
     this.tooltipContainer.setVisible(false);
 
     this.tooltipBg = addWindow(this.scene as BattleScene, 0, 0, 128, 31);
+    this.tooltipBg.setName("window-tooltip-bg");
     this.tooltipBg.setOrigin(0, 0);
 
     this.tooltipTitle = addTextObject(this.scene, 64, 4, "", TextStyle.TOOLTIP_TITLE);
+    this.tooltipTitle.setName("text-tooltip-title");
     this.tooltipTitle.setOrigin(0.5, 0);
 
     this.tooltipContent = addTextObject(this.scene, 6, 16, "", TextStyle.TOOLTIP_CONTENT);
+    this.tooltipContent.setName("text-tooltip-content");
     this.tooltipContent.setWordWrapWidth(696);
 
     this.tooltipContainer.add(this.tooltipBg);
@@ -198,6 +237,20 @@ export default class UI extends Phaser.GameObjects.Container {
 
   getMessageHandler(): BattleMessageUiHandler {
     return this.handlers[Mode.MESSAGE] as BattleMessageUiHandler;
+  }
+
+  processInfoButton(pressed: boolean) {
+    if (this.overlayActive) {
+      return false;
+    }
+
+    const battleScene = this.scene as BattleScene;
+    if ([Mode.CONFIRM, Mode.COMMAND, Mode.FIGHT, Mode.MESSAGE].includes(this.mode)) {
+      battleScene?.processInfoButton(pressed);
+      return true;
+    }
+    battleScene?.processInfoButton(false);
+    return true;
   }
 
   processInput(button: Button): boolean {
@@ -234,9 +287,33 @@ export default class UI extends Phaser.GameObjects.Container {
   }
 
   showDialogue(text: string, name: string, delay: integer = 0, callback: Function, callbackDelay?: integer, promptDelay?: integer): void {
+    // First get the gender of the player (default male) (also used if UNSET)
+    let playerGenderPrefix = "PGM";
+    if ((this.scene as BattleScene).gameData.gender === PlayerGender.FEMALE) {
+      playerGenderPrefix = "PGF";
+    }
+    // Add the prefix to the text
+    const localizationKey = playerGenderPrefix + text;
+
+    // Get localized dialogue (if available)
+    let hasi18n = false;
+    if (i18next.exists(localizationKey as ParseKeys) ) {
+      text = i18next.t(localizationKey as ParseKeys);
+      hasi18n = true;
+
+      // Skip dialogue if the player has enabled the option and the dialogue has been already seen
+      if ((this.scene as BattleScene).skipSeenDialogues && (this.scene as BattleScene).gameData.getSeenDialogues()[localizationKey] === true) {
+        console.log(`Dialogue ${localizationKey} skipped`);
+        callback();
+        return;
+      }
+    }
+    let showMessageAndCallback = () => {
+      hasi18n && (this.scene as BattleScene).gameData.saveSeenDialogue(localizationKey);
+      callback();
+    };
     if (text.indexOf("$") > -1) {
       const messagePages = text.split(/\$/g).map(m => m.trim());
-      let showMessageAndCallback = () => callback();
       for (let p = messagePages.length - 1; p >= 0; p--) {
         const originalFunc = showMessageAndCallback;
         showMessageAndCallback = () => this.showDialogue(messagePages[p], name, null, originalFunc);
@@ -245,11 +322,27 @@ export default class UI extends Phaser.GameObjects.Container {
     } else {
       const handler = this.getHandler();
       if (handler instanceof MessageUiHandler) {
-        (handler as MessageUiHandler).showDialogue(text, name, delay, callback, callbackDelay, true, promptDelay);
+        (handler as MessageUiHandler).showDialogue(text, name, delay, showMessageAndCallback, callbackDelay, true, promptDelay);
       } else {
-        this.getMessageHandler().showDialogue(text, name, delay, callback, callbackDelay, true, promptDelay);
+        this.getMessageHandler().showDialogue(text, name, delay, showMessageAndCallback, callbackDelay, true, promptDelay);
       }
     }
+  }
+
+  shouldSkipDialogue(text): boolean {
+    let playerGenderPrefix = "PGM";
+    if ((this.scene as BattleScene).gameData.gender === PlayerGender.FEMALE) {
+      playerGenderPrefix = "PGF";
+    }
+
+    const key = playerGenderPrefix + text;
+
+    if (i18next.exists(key as ParseKeys) ) {
+      if ((this.scene as BattleScene).skipSeenDialogues && (this.scene as BattleScene).gameData.getSeenDialogues()[key] === true) {
+        return true;
+      }
+    }
+    return false;
   }
 
   showTooltip(title: string, content: string, overlap?: boolean): void {

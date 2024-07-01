@@ -498,47 +498,93 @@ export function getTypeDamageMultiplier(attackType: integer, defType: integer): 
     }
   case Type.STELLAR:
     return 1;
-  } 
+  }
+}
+
+/**
+ * Retrieve the color corresponding to a specific damage multiplier
+ * @returns A color or undefined if the default color should be used
+ */
+export function getTypeDamageMultiplierColor(multiplier: TypeDamageMultiplier, side: "defense" | "offense"): string | undefined {
+  if (side === "offense") {
+    switch (multiplier) {
+    case 0:
+      return "#929292";
+    case 0.125:
+      return "#FF5500";
+    case 0.25:
+      return "#FF7400";
+    case 0.5:
+      return "#FE8E00";
+    case 1:
+      return undefined;
+    case 2:
+      return "#4AA500";
+    case 4:
+      return "#4BB400";
+    case 8:
+      return "#52C200";
+    }
+  } else if (side === "defense") {
+    switch (multiplier) {
+    case 0:
+      return "#B1B100";
+    case 0.125:
+      return "#2DB4FF";
+    case 0.25:
+      return "#00A4FF";
+    case 0.5:
+      return "#0093FF";
+    case 1:
+      return undefined;
+    case 2:
+      return "#FE8E00";
+    case 4:
+      return "#FF7400";
+    case 8:
+      return "#FF5500";
+    }
+  }
 }
 
 export function getTypeRgb(type: Type): [ integer, integer, integer ] {
   switch (type) {
   case Type.NORMAL:
-    return [ 168, 168, 120 ]; 
+    return [ 168, 168, 120 ];
   case Type.FIGHTING:
-    return [ 192, 48, 40 ]; 
+    return [ 192, 48, 40 ];
   case Type.FLYING:
-    return [ 168, 144, 240 ]; 
+    return [ 168, 144, 240 ];
   case Type.POISON:
-    return [ 160, 64, 160 ]; 
+    return [ 160, 64, 160 ];
   case Type.GROUND:
-    return [ 224, 192, 104 ]; 
+    return [ 224, 192, 104 ];
   case Type.ROCK:
-    return [ 184, 160, 56 ]; 
+    return [ 184, 160, 56 ];
   case Type.BUG:
     return [ 168, 184, 32 ];
   case Type.GHOST:
-    return [ 112, 88, 152 ]; 
+    return [ 112, 88, 152 ];
   case Type.STEEL:
-    return [ 184, 184, 208 ]; 
+    return [ 184, 184, 208 ];
   case Type.FIRE:
-    return [ 240, 128, 48 ]; 
+    return [ 240, 128, 48 ];
   case Type.WATER:
     return [ 104, 144, 240 ];
   case Type.GRASS:
-    return [ 120, 200, 80 ]; 
+    return [ 120, 200, 80 ];
   case Type.ELECTRIC:
-    return [ 248, 208, 48 ]; 
+    return [ 248, 208, 48 ];
   case Type.PSYCHIC:
-    return [ 248, 88, 136 ]; 
+    return [ 248, 88, 136 ];
   case Type.ICE:
-    return [ 152, 216, 216 ]; 
+    return [ 152, 216, 216 ];
   case Type.DRAGON:
     return [ 112, 56, 248 ];
   case Type.DARK:
     return [ 112, 88, 72 ];
   case Type.FAIRY:
-    return [ 232, 136, 200 ]; 
+    return [ 232, 136, 200 ];
   case Type.STELLAR:
     return [ 255, 255, 255 ];
   default:

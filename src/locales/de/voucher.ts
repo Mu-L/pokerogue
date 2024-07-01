@@ -1,7 +1,7 @@
-import { SimpleTranslationEntries } from "#app/plugins/i18n";
+import { SimpleTranslationEntries } from "#app/interfaces/locales";
 
 export const voucher: SimpleTranslationEntries = {
-  "vouchers": "Gutschein",
+  "vouchers": "Gutscheine",
   "eggVoucher": "Ei-Gutschein",
   "eggVoucherPlus": "Ei-Gutschein Plus",
   "eggVoucherPremium": "Ei-Gutschein Premium",

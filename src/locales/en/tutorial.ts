@@ -1,18 +1,18 @@
-import { SimpleTranslationEntries } from "#app/plugins/i18n";
+import { SimpleTranslationEntries } from "#app/interfaces/locales";
 
 export const tutorial: SimpleTranslationEntries = {
   "intro": `Welcome to PokéRogue! This is a battle-focused Pokémon fangame with roguelite elements.
     $This game is not monetized and we claim no ownership of Pokémon nor of the copyrighted assets used.
     $The game is a work in progress, but fully playable.\nFor bug reports, please use the Discord community.
     $If the game runs slowly, please ensure 'Hardware Acceleration' is turned on in your browser settings.`,
-    
+
   "accessMenu": "To access the menu, press M or Escape while awaiting input.\nThe menu contains settings and various features.",
-    
+
   "menu": `From this menu you can access the settings.
     $From the settings you can change game speed, window style, and other options.
     $There are also various other features here, so be sure to check them all!`,
 
-  "starterSelect": `From this screen, you can select your starters.\nThese are your initial party members.
+  "starterSelect": `From this screen, you can select your starters by pressing\nZ or the Space bar. These are your initial party members.
     $Each starter has a value. Your party can have up to\n6 members as long as the total does not exceed 10.
     $You can also select gender, ability, and form depending on\nthe variants you've caught or hatched.
     $The IVs for a species are also the best of every one you've\ncaught or hatched, so try to get lots of the same species!`,
@@ -22,7 +22,9 @@ export const tutorial: SimpleTranslationEntries = {
 
   "statChange": `Stat changes persist across battles as long as your Pokémon aren't recalled.
     $Your Pokémon are recalled before a trainer battle and before entering a new biome.
-    $You can also view the stat changes for the Pokémon on the field by holding C or Shift.`,
+    $You can view the stat changes for any Pokémon on the field by holding C or Shift.
+    $You can also view the moveset for an enemy Pokémon by holding V.
+    $This only reveals moves that you've seen the Pokémon use this battle.`,
 
   "selectItem": `After every battle, you are given a choice of 3 random items.\nYou may only pick one.
     $These range from consumables, to Pokémon held items, to passive permanent items.

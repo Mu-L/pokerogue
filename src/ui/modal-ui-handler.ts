@@ -3,7 +3,7 @@ import { TextStyle, addTextObject } from "./text";
 import { Mode } from "./ui";
 import UiHandler from "./ui-handler";
 import { WindowVariant, addWindow } from "./ui-theme";
-import {Button} from "../enums/buttons";
+import {Button} from "#enums/buttons";
 
 export interface ModalConfig {
   buttonActions: Function[];
@@ -39,7 +39,7 @@ export abstract class ModalUiHandler extends UiHandler {
 
   setup() {
     const ui = this.getUi();
-    
+
     this.modalContainer = this.scene.add.container(0, 0);
 
     this.modalContainer.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.scene.game.canvas.width / 6, this.scene.game.canvas.height / 6), Phaser.Geom.Rectangle.Contains);
@@ -106,7 +106,7 @@ export abstract class ModalUiHandler extends UiHandler {
 
   updateContainer(config?: ModalConfig): void {
     const [ marginTop, marginRight, marginBottom, marginLeft ] = this.getMargin(config);
-    
+
     const [ width, height ] = [ this.getWidth(config), this.getHeight(config) ];
     this.modalContainer.setPosition((((this.scene.game.canvas.width / 6) - (width + (marginRight - marginLeft))) / 2), (((-this.scene.game.canvas.height / 6) - (height + (marginBottom - marginTop))) / 2));
 

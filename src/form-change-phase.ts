@@ -7,7 +7,7 @@ import { EndEvolutionPhase, EvolutionPhase } from "./evolution-phase";
 import Pokemon, { EnemyPokemon, PlayerPokemon } from "./field/pokemon";
 import { Mode } from "./ui/ui";
 import PartyUiHandler from "./ui/party-ui-handler";
-import { BattleSpec } from "./enums/battle-spec";
+import { BattleSpec } from "#enums/battle-spec";
 import { BattlePhase, MovePhase, PokemonHealPhase } from "./phases";
 import { getTypeRgb } from "./data/type";
 
@@ -35,7 +35,7 @@ export class FormChangePhase extends EvolutionPhase {
 
   doEvolution(): void {
     const preName = this.pokemon.name;
-    
+
     this.pokemon.getPossibleForm(this.formChange).then(transformedPokemon => {
 
       [ this.pokemonEvoSprite, this.pokemonEvoTintSprite ].map(sprite => {
@@ -132,7 +132,7 @@ export class FormChangePhase extends EvolutionPhase {
 
                                           const delay = playEvolutionFanfare ? 4000 : 1750;
                                           this.scene.playSoundWithoutBgm(playEvolutionFanfare ? "evolution_fanfare" : "minor_fanfare");
-                                          
+
                                           transformedPokemon.destroy();
                                           this.scene.ui.showText(getSpeciesFormChangeMessage(this.pokemon, this.formChange, preName), null, () => this.end(), null, true, Utils.fixedInt(delay));
                                           this.scene.time.delayedCall(Utils.fixedInt(delay + 250), () => this.scene.playBgm());
@@ -278,7 +278,7 @@ export class QuietFormChangePhase extends BattlePhase {
   }
 
   end(): void {
-    if (this.pokemon.scene.currentBattle.battleSpec === BattleSpec.FINAL_BOSS && this.pokemon instanceof EnemyPokemon) {
+    if (this.pokemon.scene?.currentBattle.battleSpec === BattleSpec.FINAL_BOSS && this.pokemon instanceof EnemyPokemon) {
       this.scene.playBgm();
       this.pokemon.summonData.battleStats = [ 0, 0, 0, 0, 0, 0, 0 ];
       this.scene.unshiftPhase(new PokemonHealPhase(this.scene, this.pokemon.getBattlerIndex(), this.pokemon.getMaxHp(), null, false, false, false, true));
@@ -287,7 +287,7 @@ export class QuietFormChangePhase extends BattlePhase {
       this.pokemon.bossSegmentIndex = 4;
       this.pokemon.initBattleInfo();
       this.pokemon.cry();
-      
+
       const movePhase = this.scene.findPhase(p => p instanceof MovePhase && p.pokemon === this.pokemon) as MovePhase;
       if (movePhase) {
         movePhase.cancel();

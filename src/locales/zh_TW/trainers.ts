@@ -1,11 +1,15 @@
-import {SimpleTranslationEntries} from "#app/plugins/i18n";
+import {SimpleTranslationEntries} from "#app/interfaces/locales";
 
 // Titles of special trainers like gym leaders, elite four, and the champion
 export const titles: SimpleTranslationEntries = {
   "elite_four": "四天王",
+  "elite_four_female": "四天王",
   "gym_leader": "道館館主",
   "gym_leader_female": "道館館主",
+  "gym_leader_double": "道館館主",
   "champion": "冠軍",
+  "champion_female": "冠軍",
+  "champion_double": "冠軍搭檔",
   "rival": "勁敵",
   "professor": "博士",
   "frontier_brain": "開拓頭腦",
@@ -44,6 +48,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "depot_agent": "鐵路員工",
   "doctor": "醫生",
   "doctor_female": "醫生",
+  "firebreather": "吹火人",
   "fisherman": "垂釣者",
   "fisherman_female": "垂釣者",
   "gentleman": "紳士",
@@ -90,6 +95,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "rich_kid_female": "富家孩子",
   "rich_kids": "富二代組合",
   "roughneck": "光頭男",
+  "sailor": "水手",
   "scientist": "研究員",
   "scientist_female": "研究員",
   "scientists": "研究員組合",
@@ -296,5 +302,17 @@ export const trainerNames: SimpleTranslationEntries = {
 
   // 勁敵 Rival
   "rival": "芬恩",
-  "rival_female": "艾薇"
+  "rival_female": "艾薇",
+
+  // Double Names
+  "blue_red_double": "青綠 & 赤紅",
+  "red_blue_double": "赤紅 & 青綠",
+  "tate_liza_double": "小楓 & 小南",
+  "liza_tate_double": "小南 & 小楓",
+  "steven_wallace_double": "大吾 & 米可利",
+  "wallace_steven_double": "米可利 & 大吾",
+  "alder_iris_double": "阿戴克 & 艾莉絲",
+  "iris_alder_double": "艾莉絲 & 阿戴克",
+  "marnie_piers_double": "瑪俐 & 聶梓",
+  "piers_marnie_double": "聶梓 & 瑪俐",
 } as const;

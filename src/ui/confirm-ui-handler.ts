@@ -2,7 +2,7 @@ import BattleScene from "../battle-scene";
 import AbstractOptionSelectUiHandler, { OptionSelectConfig } from "./abstact-option-select-ui-handler";
 import { Mode } from "./ui";
 import i18next from "i18next";
-import {Button} from "../enums/buttons";
+import {Button} from "#enums/buttons";
 
 export default class ConfirmUiHandler extends AbstractOptionSelectUiHandler {
 
@@ -42,7 +42,7 @@ export default class ConfirmUiHandler extends AbstractOptionSelectUiHandler {
       };
 
       super.show([ config ]);
-      
+
       this.switchCheck = args.length >= 3 && args[2] !== null && args[2] as boolean;
 
       const xOffset = (args.length >= 4 && args[3] !== null ? args[3] as number : 0);

@@ -1,11 +1,11 @@
 import BattleScene from "../battle-scene";
+import { Button } from "#enums/buttons";
+import i18next from "i18next";
 import { Voucher, getVoucherTypeIcon, getVoucherTypeName, vouchers } from "../system/voucher";
 import MessageUiHandler from "./message-ui-handler";
 import { TextStyle, addTextObject } from "./text";
 import { Mode } from "./ui";
 import { addWindow } from "./ui-theme";
-import {Button} from "../enums/buttons";
-import i18next from "../plugins/i18n";
 
 const itemRows = 4;
 const itemCols = 17;
@@ -26,14 +26,14 @@ export default class VouchersUiHandler extends MessageUiHandler {
 
   constructor(scene: BattleScene, mode?: Mode) {
     super(scene, mode);
-    
+
     this.itemsTotal = Object.keys(vouchers).length;
     this.scrollCursor = 0;
   }
 
   setup() {
     const ui = this.getUi();
-    
+
     this.vouchersContainer = this.scene.add.container(1, -(this.scene.game.canvas.height / 6) + 1);
 
     this.vouchersContainer.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.scene.game.canvas.width / 6, this.scene.game.canvas.height / 6), Phaser.Geom.Rectangle.Contains);
@@ -49,7 +49,7 @@ export default class VouchersUiHandler extends MessageUiHandler {
     this.voucherIconsBg.setOrigin(0, 0);
 
     this.voucherIconsContainer = this.scene.add.container(6, headerBg.height + 6);
-    
+
     this.voucherIcons = [];
 
     for (let a = 0; a < itemRows * itemCols; a++) {

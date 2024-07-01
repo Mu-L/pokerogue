@@ -1,21 +1,31 @@
-import { SimpleTranslationEntries } from "#app/plugins/i18n";
+import { SimpleTranslationEntries } from "#app/interfaces/locales";
 
 // Titles of special trainers like gym leaders, elite four, and the champion
 export const titles: SimpleTranslationEntries = {
   "elite_four": "Elite dos Quatro",
+  "elite_four_female": "Elite dos Quatro",
   "gym_leader": "Líder de Ginásio",
   "gym_leader_female": "Líder de Ginásio",
+  "gym_leader_double": "Líderes de Ginásio",
   "champion": "Campeão",
+  "champion_female": "Campeã",
+  "champion_double": "Dupla Campeã",
   "rival": "Rival",
   "professor": "Professor",
   "frontier_brain": "Cérebro da Fronteira",
+  "rocket_boss": "Chefe da Equipe Rocket",
+  "magma_boss": "Chefe da Equipe Magma",
+  "aqua_boss": "Chefe da Equipe Aqua",
+  "galactic_boss": "Chefe da Equipe Galáctica",
+  "plasma_boss": "Chefe da Equipe Plasma",
+  "flare_boss": "Chefe da Equipe Flare",
   // Maybe if we add the evil teams we can add "Team Rocket" and "Team Aqua" etc. here as well as "Team Rocket Boss" and "Team Aqua Admin" etc.
 } as const;
 
 // Titles of trainers like "Youngster" or "Lass"
 export const trainerClasses: SimpleTranslationEntries = {
-  "ace_trainer": "Trinador Ás",
-  "ace_trainer_female": "Trinadora Ás",
+  "ace_trainer": "Treinador Ás",
+  "ace_trainer_female": "Treinadora Ás",
   "ace_duo": "Dupla Ás",
   "artist": "Artista",
   "artist_female": "Artista",
@@ -26,7 +36,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "baker": "Padeira",
   "battle_girl": "Lutadora",
   "beauty": "Modelo",
-  "beginners": "Beginners",
+  "beginners": "Iniciantes",
   "biker": "Motoqueiro",
   "black_belt": "Faixa Preta",
   "breeder": "Criador",
@@ -44,6 +54,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "depot_agent": "Ferroviário",
   "doctor": "Doutor",
   "doctor_female": "Doutora",
+  "firebreather": "Cospe-Fogo",
   "fishermen": "Pescador",
   "fishermen_female": "Pescadora",
   "gentleman": "Cavalheiro",
@@ -61,7 +72,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "maid": "Doméstica",
   "madame": "Madame",
   "medical_team": "Equipe Médica",
-  "musician": "Músico",    
+  "musician": "Músico",
   "hex_maniac": "Ocultista",
   "nurse": "Enfermeira",
   "nursery_aide": "Professora do Berçário",
@@ -90,6 +101,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "rich_kid_female": "Garota Rica",
   "rich_kids": "Garotos Ricos",
   "roughneck": "Arruaceiro",
+  "sailor": "Marinheiro",
   "scientist": "Cientista",
   "scientist_female": "Cientista",
   "scientists": "Cientistas",
@@ -113,6 +125,18 @@ export const trainerClasses: SimpleTranslationEntries = {
   "worker_female": "Operária",
   "workers": "Operários",
   "youngster": "Jovem",
+  "rocket_grunt": "Recruta da Equipe Rocket",
+  "rocket_grunt_female": "Recruta da Equipe Rocket",
+  "magma_grunt": "Recruta da Equipe Magma",
+  "magma_grunt_female": "Recruta da Equipe Magma",
+  "aqua_grunt": "Recruta da Equipe Aqua",
+  "aqua_grunt_female": "Recruta da Equipe Aqua",
+  "galactic_grunt": "Recruta da Equipe Galáctica",
+  "galactic_grunt_female": "Recruta da Equipe Galáctica",
+  "plasma_grunt": "Recruta da Equipe Plasma",
+  "plasma_grunt_female": "Recruta da Equipe Plasma",
+  "flare_grunt": "Recruta da Equipe Flare",
+  "flare_grunt_female": "Recruta da Equipe Flare",
 } as const;
 
 // Names of special trainers like gym leaders, elite four, and the champion
@@ -241,4 +265,21 @@ export const trainerNames: SimpleTranslationEntries = {
   "leon": "Leon",
   "rival": "Finn",
   "rival_female": "Ivy",
+  "maxie": "Maxie",
+  "archie": "Archie",
+  "cyrus": "Cyrus",
+  "ghetsis": "Ghetsis",
+  "lysandre": "Lysandre",
+
+  // Double Names
+  "blue_red_double": "Blue & Red",
+  "red_blue_double": "Red & Blue",
+  "tate_liza_double": "Tate & Liza",
+  "liza_tate_double": "Liza & Tate",
+  "steven_wallace_double": "Steven & Wallace",
+  "wallace_steven_double": "Wallace & Steven",
+  "alder_iris_double": "Alder & Iris",
+  "iris_alder_double": "Iris & Alder",
+  "marnie_piers_double": "Marnie & Piers",
+  "piers_marnie_double": "Piers & Marnie",
 } as const;

@@ -1,14 +1,24 @@
-import {SimpleTranslationEntries} from "#app/plugins/i18n";
+import {SimpleTranslationEntries} from "#app/interfaces/locales";
 
 // Titles of special trainers like gym leaders, elite four, and the champion
 export const titles: SimpleTranslationEntries = {
   "elite_four": "Conseil 4",
+  "elite_four_female": "Conseil 4",
   "gym_leader": "Champion d’Arène",
   "gym_leader_female": "Championne d’Arène",
-  "champion": "Maitre·esse", //Written in gender-inclusive language in wait of a potential split of the entry
+  "gym_leader_double": "Duo de Champions",
+  "champion": "Maitre",
+  "champion_female": "Maitresse",
+  "champion_double": "Duo de Maitres",
   "rival": "Rival·e", //Written in gender-inclusive language in wait of a potential split of the entry
   "professor": "Professeur·e", //Written in gender-inclusive language in wait of a potential split of the entry
   "frontier_brain": "Meneur·euse de Zone", //Written in gender-inclusive language in wait of a potential split of the entry
+  "rocket_boss": "Leader de la Team Rocket",
+  "magma_boss": "Leader de la Team Magma",
+  "aqua_boss": "Leader de la Team Aqua",
+  "galactic_boss": "Leader de la Team Galaxie",
+  "plasma_boss": "Leader de la Team Plasma",
+  "flare_boss": "Leader de la Team Flare",
   // Maybe if we add the evil teams we can add "Team Rocket" and "Team Aqua" etc. here as well as "Team Rocket Boss" and "Team Aqua Admin" etc.
 } as const;
 
@@ -44,6 +54,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "depot_agent": "Cheminot",
   "doctor": "Docteur",
   "doctor_female": "Docteure",
+  "firebreather": "Firebreather",
   "fisherman": "Pêcheur",
   "fisherman_female": "Pêcheuse",
   "gentleman": "Gentleman",
@@ -61,7 +72,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "maid": "Gouvernante",
   "madame": "Mondaine",
   "medical_team": "Médecins",
-  "musician": "Musicien",    
+  "musician": "Musicien",
   "hex_maniac": "Mystimaniac",
   "nurse": "Infirmière",
   "nursery_aide": "Institutrice",
@@ -90,6 +101,7 @@ export const trainerClasses: SimpleTranslationEntries = {
   "rich_kid_female": "Mademoiselle",
   "rich_kids": "Richards",
   "roughneck": "Loubard",
+  "sailor": "Marin",
   "scientist": "Scientifique",
   "scientist_female": "Scientifique",
   "scientists": "Scientifiques",
@@ -112,7 +124,19 @@ export const trainerClasses: SimpleTranslationEntries = {
   "worker": "Ouvrier",
   "worker_female": "Ouvrière",
   "workers": "Ouvriers",
-  "youngster": "Gamin"
+  "youngster": "Gamin",
+  "rocket_grunt": "Sbire de la Team Rocket",
+  "rocket_grunt_female": "Sbire de la Team Rocket",
+  "magma_grunt": "Sbire de la Team Magma",
+  "magma_grunt_female": "Sbire de la Team Magma",
+  "aqua_grunt": "Sbire de la Team Aqua",
+  "aqua_grunt_female": "Sbire de la Team Aqua",
+  "galactic_grunt": "Sbire de la Team Galaxie",
+  "galactic_grunt_female": "Sbire Team Galaxie",
+  "plasma_grunt": "Sbire de la Team Plasma",
+  "plasma_grunt_female": "Sbire de la Team Plasma",
+  "flare_grunt": "Sbire de la Team Flare",
+  "flare_grunt_female": "Sbire de la Team Flare",
 } as const;
 
 // Names of special trainers like gym leaders, elite four, and the champion
@@ -241,4 +265,17 @@ export const trainerNames: SimpleTranslationEntries = {
   "leon": "Tarak",
   "rival": "Gwenaël", //Male breton name, a celtic language spoken in  Brittany (France) and related to the word for "white" (gwenn). Finn meaning is also "white" in irish/goidelic which are also celtic languages.
   "rival_female": "Papina", //Litteral translation of ivy, also used as Female name in a North-American indigenous language
+
+
+  // Double Names
+  "blue_red_double": "Blue & Red",
+  "red_blue_double": "Red & Blue",
+  "tate_liza_double": "Lévy & Tatia",
+  "liza_tate_double": "Tatia & Lévy",
+  "steven_wallace_double": "Pierre R. & Marc",
+  "wallace_steven_double": "Marc & Pierre R.",
+  "alder_iris_double": "Goyah & Iris",
+  "iris_alder_double": "Iris & Goyah",
+  "marnie_piers_double": "Rosemary & Peterson",
+  "piers_marnie_double": "Peterson & Rosemary",
 } as const;
