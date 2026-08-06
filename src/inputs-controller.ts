@@ -1,25 +1,30 @@
-import Phaser, {Time} from "phaser";
-import * as Utils from "./utils";
-import {initTouchControls} from "./touch-controls";
-import pad_generic from "./configs/pad_generic";
-import pad_unlicensedSNES from "./configs/pad_unlicensedSNES";
-import pad_xbox360 from "./configs/pad_xbox360";
-import pad_dualshock from "./configs/pad_dualshock";
-import {Button} from "./enums/buttons";
-
-export interface GamepadMapping {
-    [key: string]: number;
-}
-
-export interface GamepadConfig {
-    padID: string;
-    padType: string;
-    gamepadMapping: GamepadMapping;
-}
-
-export interface ActionGamepadMapping {
-    [key: string]: Button;
-}
+import { globalScene } from "#app/global-scene";
+import { TouchControl } from "#app/touch-controls";
+import { Button } from "#enums/buttons";
+import { Device } from "#enums/devices";
+import { UiMode } from "#enums/ui-mode";
+import { CFG_KEYBOARD_QWERTY } from "#inputs/cfg-keyboard-qwerty";
+import { assign, getButtonWithKeycode, getIconForLatestInput, swap } from "#inputs/config-handler";
+import { PAD_DUALSHOCK } from "#inputs/pad-dualshock";
+import { PAD_GENERIC } from "#inputs/pad-generic";
+import { PAD_PROCON } from "#inputs/pad-procon";
+import { PAD_UNLICENSED_SNES } from "#inputs/pad-unlicensed-snes";
+import { PAD_XBOX360 } from "#inputs/pad-xbox360";
+import type {
+  CustomInterfaceConfig,
+  CustomKeyboardConfig,
+  CustomPadConfig,
+  Interaction,
+  InterfaceConfig,
+  MappingSettingName,
+  SelectedDevice,
+} from "#types/configs/inputs";
+import type { SettingsGamepadUiHandler } from "#ui/gamepad-settings-ui-handler";
+import type { SettingsKeyboardUiHandler } from "#ui/keyboard-settings-ui-handler";
+import { MoveTouchControlsHandler } from "#ui/move-touch-controls-handler";
+import { deepCopy } from "#utils/data";
+import { getEnumValues } from "#utils/enums";
+import Phaser from "phaser";
 
 const repeatInputDelayMillis = 250;
 
@@ -46,177 +51,256 @@ const repeatInputDelayMillis = 250;
  * providing a unified interface for all input-related interactions.
  */
 export class InputsController {
-  private buttonKeys: Phaser.Input.Keyboard.Key[][];
-  private gamepads: Array<string> = new Array();
-  private scene: Phaser.Scene;
+  private gamepads: Phaser.Input.Gamepad.Gamepad[] = [];
+  public events: Phaser.Events.EventEmitter;
 
-  private buttonLock: Button;
-  private buttonLock2: Button;
-  private interactions: Map<Button, Map<string, boolean>> = new Map();
-  private time: Time;
-  private player: Map<String, GamepadMapping> = new Map();
+  private buttonLock: Button[] = [];
+  private readonly interactions: Partial<Record<Button, Interaction>> = {};
+  private configs: Record<string, InterfaceConfig> = {};
 
-  private gamepadSupport: boolean = true;
+  public gamepadSupport = true;
+  public selectedDevice: SelectedDevice;
+
+  private disconnectedGamepads: string[] = [];
+
+  public lastSource = "keyboard";
+  private readonly inputInterval: NodeJS.Timeout[] = [];
+  private touchControls: TouchControl;
+  public moveTouchControlsHandler: MoveTouchControlsHandler;
 
   /**
-     * Initializes a new instance of the game control system, setting up initial state and configurations.
-     *
-     * @param scene - The Phaser scene associated with this instance.
-     *
-     * @remarks
-     * This constructor initializes the game control system with necessary setups for handling inputs.
-     * It prepares an interactions array indexed by button identifiers and configures default states for each button.
-     * Specific buttons like MENU and STATS are set not to repeat their actions.
-     * It concludes by calling the `init` method to complete the setup.
-     */
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-    this.time = this.scene.time;
-    this.buttonKeys = [];
+   * Initializes a new instance of the game control system, setting up initial state and configurations.
+   *
+   * @remarks
+   * This constructor initializes the game control system with necessary setups for handling inputs.
+   * It prepares an interactions array indexed by button identifiers and configures default states for each button.
+   * Specific buttons like MENU and STATS are set not to repeat their actions.
+   * It concludes by calling the `init` method to complete the setup.
+   */
+  constructor() {
+    this.selectedDevice = {
+      [Device.KEYBOARD]: "default",
+    };
 
-    for (const b of Utils.getEnumValues(Button)) {
+    for (const b of getEnumValues(Button)) {
+      // We don't want the menu key to be repeated
+      if (b === Button.MENU || b === Button.STATS) {
+        continue;
+      }
       this.interactions[b] = {
         pressTime: false,
         isPressed: false,
         source: null,
       };
     }
-    // We don't want the menu key to be repeated
-    delete this.interactions[Button.MENU];
-    delete this.interactions[Button.STATS];
     this.init();
   }
 
   /**
-     * Sets up event handlers and initializes gamepad and keyboard controls.
-     *
-     * @remarks
-     * This method configures event listeners for both gamepad and keyboard inputs.
-     * It handles gamepad connections/disconnections and button press events, and ensures keyboard controls are set up.
-     * Additionally, it manages the game's behavior when it loses focus to prevent unwanted game actions during this state.
-     */
+   * Sets up event handlers and initializes gamepad and keyboard controls.
+   *
+   * @remarks
+   * This method configures event listeners for both gamepad and keyboard inputs.
+   * It handles gamepad connections/disconnections and button press events, and ensures keyboard controls are set up.
+   * Additionally, it manages the game's behavior when it loses focus to prevent unwanted game actions during this state.
+   */
   init(): void {
-    this.events = new Phaser.Events.EventEmitter();
-    this.scene.game.events.on(Phaser.Core.Events.BLUR, () => {
+    this.events = globalScene.game.events;
+
+    globalScene.game.events.on(Phaser.Core.Events.BLUR, () => {
       this.loseFocus();
     });
 
-    if (typeof this.scene.input.gamepad !== "undefined") {
-      this.scene.input.gamepad.on("connected", function (thisGamepad) {
-        this.refreshGamepads();
-        this.setupGamepad(thisGamepad);
-      }, this);
+    if (typeof globalScene.input.gamepad !== "undefined") {
+      globalScene.input.gamepad?.on(
+        "connected",
+        function (this: InputsController, thisGamepad: Phaser.Input.Gamepad.Gamepad) {
+          if (!thisGamepad) {
+            return;
+          }
+          this.refreshGamepads();
+          this.setupGamepad();
+          this.onReconnect(thisGamepad);
+        },
+        this,
+      );
+
+      globalScene.input.gamepad?.on(
+        "disconnected",
+        function (this: InputsController, thisGamepad: Phaser.Input.Gamepad.Gamepad) {
+          this.onDisconnect(thisGamepad); // when a gamepad is disconnected
+        },
+        this,
+      );
 
       // Check to see if the gamepad has already been setup by the browser
-      this.scene.input.gamepad.refreshPads();
-      if (this.scene.input.gamepad.total) {
+      globalScene.input.gamepad?.refreshPads();
+      if (globalScene.input.gamepad?.total) {
         this.refreshGamepads();
         for (const thisGamepad of this.gamepads) {
-          this.scene.input.gamepad.emit("connected", thisGamepad);
+          globalScene.input.gamepad.emit("connected", thisGamepad);
         }
       }
 
-      this.scene.input.gamepad.on("down", this.gamepadButtonDown, this);
-      this.scene.input.gamepad.on("up", this.gamepadButtonUp, this);
+      globalScene.input.gamepad?.on("down", this.gamepadButtonDown, this).on("up", this.gamepadButtonUp, this);
+      globalScene.input.keyboard?.on("keydown", this.keyboardKeyDown, this).on("keyup", this.keyboardKeyUp, this);
     }
-
-    // Keyboard
-    this.setupKeyboardControls();
+    this.touchControls = new TouchControl();
+    this.moveTouchControlsHandler = new MoveTouchControlsHandler(this.touchControls);
   }
 
   /**
-     * Handles actions to take when the game loses focus, such as deactivating pressed keys.
-     *
-     * @remarks
-     * This method is triggered when the game or the browser tab loses focus. It ensures that any keys pressed are deactivated to prevent stuck keys affecting gameplay when the game is not active.
-     */
+   * Handles actions to take when the game loses focus, such as deactivating pressed keys.
+   *
+   * @remarks
+   * This method is triggered when the game or the browser tab loses focus. It ensures that any keys pressed are deactivated to prevent stuck keys affecting gameplay when the game is not active.
+   */
   loseFocus(): void {
     this.deactivatePressedKey();
+    this.touchControls.deactivatePressedKey();
   }
 
   /**
-     * Enables or disables support for gamepad input.
-     *
-     * @param value - A boolean indicating whether gamepad support should be enabled (true) or disabled (false).
-     *
-     * @remarks
-     * This method toggles gamepad support. If disabled, it also ensures that all currently pressed gamepad buttons are deactivated to avoid stuck inputs.
-     */
+   * Enables or disables support for gamepad input.
+   *
+   * @param value - A boolean indicating whether gamepad support should be enabled (true) or disabled (false).
+   *
+   * @remarks
+   * This method toggles gamepad support. If disabled, it also ensures that all currently pressed gamepad buttons are deactivated to avoid stuck inputs.
+   */
   setGamepadSupport(value: boolean): void {
     if (value) {
       this.gamepadSupport = true;
     } else {
       this.gamepadSupport = false;
-      // if we disable the gamepad, we want to release every key pressed
       this.deactivatePressedKey();
     }
   }
 
   /**
-     * Updates the interaction handling by processing input states.
-     * This method gives priority to certain buttons by reversing the order in which they are checked.
-     *
-     * @remarks
-     * The method iterates over all possible buttons, checking for specific conditions such as:
-     * - If the button is registered in the `interactions` dictionary.
-     * - If the button has been held down long enough.
-     * - If the button is currently pressed.
-     *
-     * Special handling is applied if gamepad support is disabled but a gamepad source is still triggering inputs,
-     * preventing potential infinite loops by removing the last processed movement time for the button.
-     */
-  update(): void {
-    for (const b of Utils.getEnumValues(Button).reverse()) {
-      if (
-        this.interactions.hasOwnProperty(b) &&
-                this.repeatInputDurationJustPassed(b) &&
-                this.interactions[b].isPressed
-      ) {
-        // Prevents repeating button interactions when gamepad support is disabled.
-        if (!this.gamepadSupport && this.interactions[b].source === "gamepad") {
-          // Deletes the last interaction for a button if gamepad is disabled.
-          this.delLastProcessedMovementTime(b);
-          return;
-        }
-        // Emits an event for the button press.
-        this.events.emit("input_down", {
-          controller_type: this.interactions[b].source,
-          button: b,
-        });
-        this.setLastProcessedMovementTime(b, this.interactions[b].source);
-      }
+   * Sets the currently chosen gamepad and initializes related settings.
+   * This method first deactivates any active key presses and then initializes the gamepad settings.
+   *
+   * @param gamepad - The identifier of the gamepad to set as chosen.
+   */
+  setChosenGamepad(gamepad: string): void {
+    this.deactivatePressedKey();
+    this.initChosenGamepad(gamepad);
+  }
+
+  /**
+   * Sets the currently chosen keyboard layout and initializes related settings.
+   *
+   * @param layoutKeyboard - The identifier of the keyboard layout to set as chosen.
+   */
+  setChosenKeyboardLayout(layoutKeyboard: string): void {
+    this.deactivatePressedKey();
+    this.initChosenLayoutKeyboard(layoutKeyboard);
+  }
+
+  /**
+   * Retrieves the identifiers of all connected gamepads, excluding any that are currently marked as disconnected.
+   * @returns Array<String> An array of strings representing the IDs of the connected gamepads.
+   */
+  getGamepadsName(): string[] {
+    return this.gamepads.filter(g => !this.disconnectedGamepads.includes(g.id)).map(g => g.id);
+  }
+
+  /**
+   * Initializes the chosen gamepad by setting its identifier in the local storage and updating the UI to reflect the chosen gamepad.
+   * If a gamepad name is provided, it uses that as the chosen gamepad; otherwise, it defaults to the currently chosen gamepad.
+   * @param gamepadName Optional parameter to specify the name of the gamepad to initialize as chosen.
+   */
+  initChosenGamepad(gamepadName?: string): void {
+    if (gamepadName) {
+      this.selectedDevice[Device.GAMEPAD] = gamepadName.toLowerCase();
     }
+    const handler = globalScene.ui?.handlers[UiMode.SETTINGS_GAMEPAD] as SettingsGamepadUiHandler;
+    handler?.updateChosenGamepadDisplay();
   }
 
   /**
-     * Configures a gamepad for use based on its device ID.
-     *
-     * @param thisGamepad - The gamepad to set up.
-     *
-     * @remarks
-     * This method initializes a gamepad by mapping its ID to a predefined configuration.
-     * It updates the player's gamepad mapping based on the identified configuration, ensuring
-     * that the gamepad controls are correctly mapped to in-game actions.
-     */
-  setupGamepad(thisGamepad: Phaser.Input.Gamepad.Gamepad): void {
-    const gamepadID = thisGamepad.id.toLowerCase();
-    const mappedPad = this.mapGamepad(gamepadID);
-    this.player["mapping"] = mappedPad.gamepadMapping;
+   * Initializes the chosen keyboard layout by setting its identifier in the local storage and updating the UI to reflect the chosen layout.
+   * If a layout name is provided, it uses that as the chosen layout; otherwise, it defaults to the currently chosen layout.
+   * @param layoutKeyboard Optional parameter to specify the name of the keyboard layout to initialize as chosen.
+   */
+  initChosenLayoutKeyboard(layoutKeyboard?: string): void {
+    if (layoutKeyboard) {
+      this.selectedDevice[Device.KEYBOARD] = layoutKeyboard.toLowerCase();
+    }
+    const handler = globalScene.ui?.handlers[UiMode.SETTINGS_KEYBOARD] as SettingsKeyboardUiHandler;
+    handler?.updateChosenKeyboardDisplay();
   }
 
   /**
-     * Refreshes and re-indexes the list of connected gamepads.
-     *
-     * @remarks
-     * This method updates the list of gamepads to exclude any that are undefined.
-     * It corrects the index of each gamepad to account for any previously undefined entries,
-     * ensuring that all gamepads are properly indexed and can be accurately referenced within the game.
-     */
+   * Handles the disconnection of a gamepad by adding its identifier to a list of disconnected gamepads.
+   * This is necessary because Phaser retains memory of previously connected gamepads, and without tracking
+   * disconnections, it would be impossible to determine the connection status of gamepads. This method ensures
+   * that disconnected gamepads are recognized and can be appropriately hidden in the gamepad selection menu.
+   *
+   * @param thisGamepad The gamepad that has been disconnected.
+   */
+  onDisconnect(thisGamepad: Phaser.Input.Gamepad.Gamepad): void {
+    this.disconnectedGamepads.push(thisGamepad.id);
+  }
+
+  /**
+   * Updates the tracking of disconnected gamepads when a gamepad is reconnected.
+   * It removes the reconnected gamepad's identifier from the `disconnectedGamepads` array,
+   * effectively updating its status to connected.
+   *
+   * @param thisGamepad The gamepad that has been reconnected.
+   */
+  onReconnect(thisGamepad: Phaser.Input.Gamepad.Gamepad): void {
+    this.disconnectedGamepads = this.disconnectedGamepads.filter(g => g !== thisGamepad.id);
+  }
+
+  /**
+   * Initializes or updates configurations for connected gamepads.
+   * It retrieves the names of all connected gamepads, sets up their configurations according to stored or default settings,
+   * and ensures these configurations are saved.
+   */
+  setupGamepad(): void {
+    const allGamepads = this.getGamepadsName();
+    for (const gamepad of allGamepads) {
+      const gamepadID = gamepad.toLowerCase();
+      if (!this.selectedDevice[Device.GAMEPAD]) {
+        this.setChosenGamepad(gamepadID);
+      }
+      const config = deepCopy(this.getConfig(gamepadID)) as InterfaceConfig;
+      config.custom = this.configs[gamepadID]?.custom || { ...config.default };
+      this.configs[gamepadID] = config;
+      globalScene.gameData?.saveMappingConfigs(gamepadID, this.configs[gamepadID]);
+    }
+    this.lastSource = "gamepad";
+    const handler = globalScene.ui?.handlers[UiMode.SETTINGS_GAMEPAD] as SettingsGamepadUiHandler;
+    handler?.updateChosenGamepadDisplay();
+  }
+
+  /**
+   * Initializes or updates configurations for connected keyboards.
+   */
+  setupKeyboard(): void {
+    for (const layout of ["default"]) {
+      const config = deepCopy(this.getConfigKeyboard(layout)) as InterfaceConfig;
+      config.custom = this.configs[layout]?.custom || { ...config.default };
+      this.configs[layout] = config;
+      globalScene.gameData?.saveMappingConfigs(this.selectedDevice[Device.KEYBOARD], this.configs[layout]);
+    }
+    this.initChosenLayoutKeyboard(this.selectedDevice[Device.KEYBOARD]);
+  }
+
+  /**
+   * Refreshes and re-indexes the list of connected gamepads.
+   *
+   * @remarks
+   * This method updates the list of gamepads to exclude any that are undefined.
+   * It corrects the index of each gamepad to account for any previously undefined entries,
+   * ensuring that all gamepads are properly indexed and can be accurately referenced within the game.
+   */
   refreshGamepads(): void {
     // Sometimes, gamepads are undefined. For some reason.
-    this.gamepads = this.scene.input.gamepad.gamepads.filter(function (el) {
-      return el !== null;
-    });
+    this.gamepads = globalScene.input.gamepad?.gamepads.filter(el => el !== null) ?? [];
 
     for (const [index, thisGamepad] of this.gamepads.entries()) {
       thisGamepad.index = index; // Overwrite the gamepad index, in case we had undefined gamepads earlier
@@ -224,367 +308,291 @@ export class InputsController {
   }
 
   /**
-     * Retrieves the current gamepad mapping for in-game actions.
-     *
-     * @returns An object mapping gamepad buttons to in-game actions based on the player's current gamepad configuration.
-     *
-     * @remarks
-     * This method constructs a mapping of gamepad buttons to in-game action buttons according to the player's
-     * current gamepad configuration. If no configuration is available, it returns an empty mapping.
-     * The mapping includes directional controls, action buttons, and system commands among others,
-     * adjusted for any custom settings such as swapped action buttons.
-     */
-  getActionGamepadMapping(): ActionGamepadMapping {
-    const gamepadMapping = {};
-    if (!this.player?.mapping) {
-      return gamepadMapping;
+   * Ensures the keyboard is initialized by checking if there is an active configuration for the keyboard.
+   * If not, it sets up the keyboard with default configurations.
+   */
+  ensureKeyboardIsInit(): void {
+    if (!this.getActiveConfig(Device.KEYBOARD)?.padID) {
+      this.setupKeyboard();
     }
-    gamepadMapping[this.player.mapping.LC_N] = Button.UP;
-    gamepadMapping[this.player.mapping.LC_S] = Button.DOWN;
-    gamepadMapping[this.player.mapping.LC_W] = Button.LEFT;
-    gamepadMapping[this.player.mapping.LC_E] = Button.RIGHT;
-    gamepadMapping[this.player.mapping.TOUCH] = Button.SUBMIT;
-    gamepadMapping[this.player.mapping.RC_S] = this.scene.abSwapped ? Button.CANCEL : Button.ACTION;
-    gamepadMapping[this.player.mapping.RC_E] = this.scene.abSwapped ? Button.ACTION : Button.CANCEL;
-    gamepadMapping[this.player.mapping.SELECT] = Button.STATS;
-    gamepadMapping[this.player.mapping.START] = Button.MENU;
-    gamepadMapping[this.player.mapping.RB] = Button.CYCLE_SHINY;
-    gamepadMapping[this.player.mapping.LB] = Button.CYCLE_FORM;
-    gamepadMapping[this.player.mapping.LT] = Button.CYCLE_GENDER;
-    gamepadMapping[this.player.mapping.RT] = Button.CYCLE_ABILITY;
-    gamepadMapping[this.player.mapping.RC_W] = Button.CYCLE_NATURE;
-    gamepadMapping[this.player.mapping.RC_N] = Button.CYCLE_VARIANT;
-    gamepadMapping[this.player.mapping.LS] = Button.SPEED_UP;
-    gamepadMapping[this.player.mapping.RS] = Button.SLOW_DOWN;
-
-    return gamepadMapping;
   }
 
   /**
-     * Handles the 'down' event for gamepad buttons, emitting appropriate events and updating the interaction state.
-     *
-     * @param pad - The gamepad on which the button press occurred.
-     * @param button - The button that was pressed.
-     * @param value - The value associated with the button press, typically indicating pressure or degree of activation.
-     *
-     * @remarks
-     * This method is triggered when a gamepad button is pressed. If gamepad support is enabled, it:
-     * - Retrieves the current gamepad action mapping.
-     * - Checks if the pressed button is mapped to a game action.
-     * - If mapped, emits an 'input_down' event with the controller type and button action, and updates the interaction of this button.
-     */
-  gamepadButtonDown(pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button, value: number): void {
-    if (!this.gamepadSupport) {
+   * Handles the keydown event for the keyboard.
+   *
+   * @param event The keyboard event.
+   */
+  keyboardKeyDown(event: KeyboardEvent): void {
+    this.lastSource = "keyboard";
+    this.ensureKeyboardIsInit();
+    const buttonDown = getButtonWithKeycode(this.getActiveConfig(Device.KEYBOARD)!, event.keyCode);
+    if (buttonDown != null) {
+      if (this.buttonLock.includes(buttonDown)) {
+        return;
+      }
+      this.events.emit("input_down", {
+        controller_type: "keyboard",
+        button: buttonDown,
+      });
+      clearInterval(this.inputInterval[buttonDown]);
+      this.inputInterval[buttonDown] = setInterval(() => {
+        this.events.emit("input_down", {
+          controller_type: "keyboard",
+          button: buttonDown,
+        });
+      }, repeatInputDelayMillis);
+      this.buttonLock.push(buttonDown);
+    }
+  }
+
+  /**
+   * Handles the keyup event for the keyboard.
+   *
+   * @param event The keyboard event.
+   */
+  keyboardKeyUp(event: KeyboardEvent): void {
+    this.lastSource = "keyboard";
+    // Bang is safe here; can't receive keyboard input if no active keyboard
+    const buttonUp = getButtonWithKeycode(this.getActiveConfig(Device.KEYBOARD)!, event.keyCode);
+    if (buttonUp != null) {
+      this.events.emit("input_up", {
+        controller_type: "keyboard",
+        button: buttonUp,
+      });
+      const index = this.buttonLock.indexOf(buttonUp);
+      this.buttonLock.splice(index, 1);
+      clearInterval(this.inputInterval[buttonUp]);
+    }
+  }
+
+  /**
+   * Handles button press events on a gamepad. This method sets the gamepad as chosen on the first input if no gamepad is currently chosen.
+   * It checks if gamepad support is enabled and if the event comes from the chosen gamepad. If so, it maps the button press to a specific
+   * action using a custom configuration, emits an event for the button press, and records the time of the action.
+   *
+   * @param pad The gamepad on which the button was pressed.
+   * @param button The specific button that was pressed.
+   * @param value The intensity or value of the button press, if applicable.
+   */
+  gamepadButtonDown(pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button, _value: number): void {
+    if (!this.configs[this.selectedDevice[Device.KEYBOARD]]?.padID) {
+      this.setupKeyboard();
+    }
+    if (!pad) {
       return;
     }
-    const actionMapping = this.getActionGamepadMapping();
-    const buttonDown = actionMapping.hasOwnProperty(button.index) && actionMapping[button.index];
-    if (buttonDown !== undefined) {
+    this.lastSource = "gamepad";
+    if (
+      !this.selectedDevice[Device.GAMEPAD]
+      || (globalScene.ui.getMode() !== UiMode.GAMEPAD_BINDING
+        && this.selectedDevice[Device.GAMEPAD] !== pad.id.toLowerCase())
+    ) {
+      this.setChosenGamepad(pad.id);
+    }
+    if (!this.gamepadSupport || pad.id.toLowerCase() !== this.selectedDevice[Device.GAMEPAD]?.toLowerCase()) {
+      return;
+    }
+    const activeConfig = this.getActiveConfig(Device.GAMEPAD);
+    const buttonDown = activeConfig && getButtonWithKeycode(activeConfig, button.index);
+    if (buttonDown != null) {
+      if (this.buttonLock.includes(buttonDown)) {
+        return;
+      }
       this.events.emit("input_down", {
         controller_type: "gamepad",
         button: buttonDown,
       });
-      this.setLastProcessedMovementTime(buttonDown, "gamepad");
+      clearInterval(this.inputInterval[buttonDown]);
+      this.inputInterval[buttonDown] = setInterval(() => {
+        if (!this.buttonLock.includes(buttonDown)) {
+          clearInterval(this.inputInterval[buttonDown]);
+          return;
+        }
+        this.events.emit("input_down", {
+          controller_type: "gamepad",
+          button: buttonDown,
+        });
+      }, repeatInputDelayMillis);
+      this.buttonLock.push(buttonDown);
     }
   }
 
   /**
-     * Handles the 'up' event for gamepad buttons, emitting appropriate events and clearing the interaction state.
-     *
-     * @param pad - The gamepad on which the button release occurred.
-     * @param button - The button that was released.
-     * @param value - The value associated with the button release, typically indicating pressure or degree of deactivation.
-     *
-     * @remarks
-     * This method is triggered when a gamepad button is released. If gamepad support is enabled, it:
-     * - Retrieves the current gamepad action mapping.
-     * - Checks if the released button is mapped to a game action.
-     * - If mapped, emits an 'input_up' event with the controller type and button action, and clears the interaction for this button.
-     */
-  gamepadButtonUp(pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button, value: number): void {
-    if (!this.gamepadSupport) {
+   * Responds to a button release event on a gamepad by checking if the gamepad is supported and currently chosen.
+   * If conditions are met, it identifies the configured action for the button, emits an event signaling the button release,
+   * and clears the record of the button.
+   *
+   * @param pad The gamepad from which the button was released.
+   * @param button The specific button that was released.
+   * @param value The intensity or value of the button release, if applicable.
+   */
+  gamepadButtonUp(pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button, _value: number): void {
+    if (!pad) {
       return;
     }
-    const actionMapping = this.getActionGamepadMapping();
-    const buttonUp = actionMapping.hasOwnProperty(button.index) && actionMapping[button.index];
+    this.lastSource = "gamepad";
+    if (!this.gamepadSupport || pad.id.toLowerCase() !== this.selectedDevice[Device.GAMEPAD]) {
+      return;
+    }
+    // Bang is safe here; can't receive gamepad input if no active gamepad
+    const buttonUp = getButtonWithKeycode(this.getActiveConfig(Device.GAMEPAD)!, button.index);
     if (buttonUp !== undefined) {
       this.events.emit("input_up", {
         controller_type: "gamepad",
         button: buttonUp,
       });
-      this.delLastProcessedMovementTime(buttonUp);
+      const index = this.buttonLock.indexOf(buttonUp);
+      this.buttonLock.splice(index, 1);
+      clearInterval(this.inputInterval[buttonUp]);
     }
   }
 
   /**
-     * Configures keyboard controls for the game, mapping physical keys to game actions.
-     *
-     * @remarks
-     * This method sets up keyboard bindings for game controls using Phaser's `KeyCodes`. Each game action, represented
-     * by a button in the `Button` enum, is associated with one or more physical keys. For example, movement actions
-     * (up, down, left, right) are mapped to both arrow keys and WASD keys. Actions such as submit, cancel, and other
-     * game-specific functions are mapped to appropriate keys like Enter, Space, etc.
-     *
-     * The method does the following:
-     * - Defines a `keyConfig` object that associates each `Button` enum value with an array of `KeyCodes`.
-     * - Iterates over all values of the `Button` enum to set up these key bindings within the Phaser game scene.
-     * - For each button, it adds the respective keys to the game's input system and stores them in `this.buttonKeys`.
-     * - Additional configurations for mobile or alternative input schemes are stored in `mobileKeyConfig`.
-     *
-     * Post-setup, it initializes touch controls (if applicable) and starts listening for keyboard inputs using
-     * `listenInputKeyboard`, ensuring that all configured keys are actively monitored for player interactions.
-     */
-  setupKeyboardControls(): void {
-    const keyCodes = Phaser.Input.Keyboard.KeyCodes;
-    const keyConfig = {
-      [Button.UP]: [keyCodes.UP, keyCodes.W],
-      [Button.DOWN]: [keyCodes.DOWN, keyCodes.S],
-      [Button.LEFT]: [keyCodes.LEFT, keyCodes.A],
-      [Button.RIGHT]: [keyCodes.RIGHT, keyCodes.D],
-      [Button.SUBMIT]: [keyCodes.ENTER],
-      [Button.ACTION]: [keyCodes.SPACE, keyCodes.Z],
-      [Button.CANCEL]: [keyCodes.BACKSPACE, keyCodes.X],
-      [Button.MENU]: [keyCodes.ESC, keyCodes.M],
-      [Button.STATS]: [keyCodes.SHIFT, keyCodes.C],
-      [Button.CYCLE_SHINY]: [keyCodes.R],
-      [Button.CYCLE_FORM]: [keyCodes.F],
-      [Button.CYCLE_GENDER]: [keyCodes.G],
-      [Button.CYCLE_ABILITY]: [keyCodes.E],
-      [Button.CYCLE_NATURE]: [keyCodes.N],
-      [Button.CYCLE_VARIANT]: [keyCodes.V],
-      [Button.SPEED_UP]: [keyCodes.PLUS],
-      [Button.SLOW_DOWN]: [keyCodes.MINUS]
-    };
-    const mobileKeyConfig = {};
-    for (const b of Utils.getEnumValues(Button)) {
-      const keys: Phaser.Input.Keyboard.Key[] = [];
-      if (keyConfig.hasOwnProperty(b)) {
-        for (const k of keyConfig[b]) {
-          keys.push(this.scene.input.keyboard.addKey(k, false));
-        }
-        mobileKeyConfig[Button[b]] = keys[0];
-      }
-      this.buttonKeys[b] = keys;
-    }
-
-    initTouchControls(mobileKeyConfig);
-    this.listenInputKeyboard();
-  }
-
-  /**
-     * Sets up event listeners for keyboard inputs on all registered keys.
-     *
-     * @remarks
-     * This method iterates over an array of keyboard button rows (`this.buttonKeys`), adding 'down' and 'up'
-     * event listeners for each key. These listeners handle key press and release actions respectively.
-     *
-     * - **Key Down Event**: When a key is pressed down, the method emits an 'input_down' event with the button
-     *   and the source ('keyboard'). It also records the time and state of the key press by calling
-     *   `setLastProcessedMovementTime`.
-     *
-     * - **Key Up Event**: When a key is released, the method emits an 'input_up' event similarly, specifying the button
-     *   and source. It then clears the recorded press time and state by calling
-     *   `delLastProcessedMovementTime`.
-     *
-     * This setup ensures that each key on the keyboard is monitored for press and release events,
-     * and that these events are properly communicated within the system.
-     */
-  listenInputKeyboard(): void {
-    this.buttonKeys.forEach((row, index) => {
-      for (const key of row) {
-        key.on("down", () => {
-          this.events.emit("input_down", {
-            controller_type: "keyboard",
-            button: index,
-          });
-          this.setLastProcessedMovementTime(index, "keyboard");
-        });
-        key.on("up", () => {
-          this.events.emit("input_up", {
-            controller_type: "keyboard",
-            button: index,
-          });
-          this.delLastProcessedMovementTime(index);
-        });
-      }
-    });
-  }
-
-  /**
-     * Maps a gamepad ID to a specific gamepad configuration based on the ID's characteristics.
-     *
-     * @param id - The gamepad ID string, typically representing a unique identifier for a gamepad model or make.
-     * @returns A `GamepadConfig` object corresponding to the identified gamepad model.
-     *
-     * @remarks
-     * This function analyzes the provided gamepad ID and matches it to a predefined configuration based on known identifiers:
-     * - If the ID includes both '081f' and 'e401', it is identified as an unlicensed SNES gamepad.
-     * - If the ID contains 'xbox' and '360', it is identified as an Xbox 360 gamepad.
-     * - If the ID contains '054c', it is identified as a DualShock gamepad.
-     * If no specific identifiers are recognized, a generic gamepad configuration is returned.
-     */
-  mapGamepad(id: string): GamepadConfig {
+   * Retrieves the configuration object for a gamepad based on its identifier. The method identifies specific gamepad models
+   * based on substrings in the identifier and returns predefined configurations for recognized models.
+   * If no specific configuration matches, it defaults to a generic gamepad configuration.
+   *
+   * @param id The identifier string of the gamepad.
+   * @returns InterfaceConfig The configuration object corresponding to the identified gamepad type.
+   */
+  getConfig(id: string): InterfaceConfig {
     id = id.toLowerCase();
 
     if (id.includes("081f") && id.includes("e401")) {
-      return pad_unlicensedSNES;
-    } else if (id.includes("xbox") && id.includes("360")) {
-      return pad_xbox360;
-    } else if (id.includes("054c")) {
-      return pad_dualshock;
+      return PAD_UNLICENSED_SNES as InterfaceConfig;
+    }
+    if (id.includes("xbox") && id.includes("360")) {
+      return PAD_XBOX360 as InterfaceConfig;
+    }
+    if (id.includes("054c")) {
+      return PAD_DUALSHOCK as InterfaceConfig;
+    }
+    if (id.includes("057e") && id.includes("2009")) {
+      return PAD_PROCON as InterfaceConfig;
     }
 
-    return pad_generic;
+    return PAD_GENERIC as InterfaceConfig;
   }
 
   /**
-     * repeatInputDurationJustPassed returns true if @param button has been held down long
-     * enough to fire a repeated input. A button must claim the buttonLock before
-     * firing a repeated input - this is to prevent multiple buttons from firing repeatedly.
-     */
-  repeatInputDurationJustPassed(button: Button): boolean {
-    if (!this.isButtonLocked(button)) {
-      return false;
+   * Retrieves the configuration object for a keyboard layout based on its identifier.
+   *
+   * @param id The identifier string of the keyboard layout.
+   * @returns InterfaceConfig The configuration object corresponding to the identified keyboard layout.
+   */
+  getConfigKeyboard(id: string): InterfaceConfig {
+    if (id === "default") {
+      return CFG_KEYBOARD_QWERTY;
     }
-    if (this.time.now - this.interactions[button].pressTime >= repeatInputDelayMillis) {
-      return true;
-    }
+
+    return CFG_KEYBOARD_QWERTY;
   }
 
   /**
-     * This method updates the interaction state to reflect that the button is pressed.
-     *
-     * @param button - The button for which to set the interaction.
-     * @param source - The source of the input (defaults to 'keyboard'). This helps identify the origin of the input, especially useful in environments with multiple input devices.
-     *
-     * @remarks
-     * This method is responsible for updating the interaction state of a button within the `interactions` dictionary. If the button is not already registered, this method returns immediately.
-     * When invoked, it performs the following updates:
-     * - `pressTime`: Sets this to the current time, representing when the button was initially pressed.
-     * - `isPressed`: Marks the button as currently being pressed.
-     * - `source`: Identifies the source device of the input, which can vary across different hardware (e.g., keyboard, gamepad).
-     *
-     * Additionally, this method locks the button (by calling `setButtonLock`) to prevent it from being re-processed until it is released, ensuring that each press is handled distinctly.
-     */
-  setLastProcessedMovementTime(button: Button, source: String = "keyboard"): void {
-    if (!this.interactions.hasOwnProperty(button)) {
-      return;
-    }
-    this.setButtonLock(button);
-    this.interactions[button].pressTime = this.time.now;
-    this.interactions[button].isPressed = true;
-    this.interactions[button].source = source;
-  }
-
-  /**
-     * Clears the last interaction for a specified button.
-     *
-     * @param button - The button for which to clear the interaction.
-     *
-     * @remarks
-     * This method resets the interaction details of the button, allowing it to be processed as a new input when pressed again.
-     * If the button is not registered in the `interactions` dictionary, this method returns immediately, otherwise:
-     * - `pressTime` is cleared. This was previously storing the timestamp of when the button was initially pressed.
-     * - `isPressed` is set to false, indicating that the button is no longer being pressed.
-     * - `source` is set to null, which had been indicating the device from which the button input was originating.
-     *
-     * It releases the button lock, which prevents the button from being processed repeatedly until it's explicitly released.
-     */
-  delLastProcessedMovementTime(button: Button): void {
-    if (!this.interactions.hasOwnProperty(button)) {
-      return;
-    }
-    this.releaseButtonLock(button);
-    this.interactions[button].pressTime = null;
-    this.interactions[button].isPressed = false;
-    this.interactions[button].source = null;
-  }
-
-  /**
-     * Deactivates all currently pressed keys and resets their interaction states.
-     *
-     * @remarks
-     * This method is used to reset the state of all buttons within the `interactions` dictionary,
-     * effectively deactivating any currently pressed keys. It performs the following actions:
-     *
-     * - Releases button locks for predefined buttons (`buttonLock` and `buttonLock2`), allowing them
-     *   to be pressed again or properly re-initialized in future interactions.
-     * - Iterates over all possible button values obtained via `Utils.getEnumValues(Button)`, and for
-     *   each button:
-     *   - Checks if the button is currently registered in the `interactions` dictionary.
-     *   - Resets `pressTime` to null, indicating that there is no ongoing interaction.
-     *   - Sets `isPressed` to false, marking the button as not currently active.
-     *   - Clears the `source` field, removing the record of which device the button press came from.
-     *
-     * This method is typically called when needing to ensure that all inputs are neutralized.
-     */
+   * Deactivates all currently pressed keys.
+   */
   deactivatePressedKey(): void {
-    this.releaseButtonLock(this.buttonLock);
-    this.releaseButtonLock(this.buttonLock2);
-    for (const b of Utils.getEnumValues(Button)) {
-      if (this.interactions.hasOwnProperty(b)) {
-        this.interactions[b].pressTime = null;
-        this.interactions[b].isPressed = false;
-        this.interactions[b].source = null;
+    for (const value of Object.values(this.inputInterval)) {
+      clearInterval(value);
+    }
+    this.buttonLock = [];
+  }
+
+  /**
+   * Retrieves the active configuration for the currently chosen device.
+   * It checks if a specific device ID is stored in configurations and returns it.
+   *
+   * @returns InterfaceConfig The configuration object for the active gamepad, or null if not set.
+   */
+  getActiveConfig(device: Device.KEYBOARD): CustomKeyboardConfig | null;
+  getActiveConfig(device: Device.GAMEPAD): CustomPadConfig | null;
+  getActiveConfig(device: Device): CustomInterfaceConfig | null;
+  getActiveConfig(device: Device): CustomInterfaceConfig | null {
+    const activeDevice = this.selectedDevice[device];
+    if (activeDevice == null) {
+      return null;
+    }
+    const config = this.configs[activeDevice];
+    if (config?.padID) {
+      config.custom ??= { ...config.default };
+      // Cast is safe here as we assign `custom` above if it was undefined
+      return config as CustomInterfaceConfig;
+    }
+    return null;
+  }
+
+  getIconForLatestInputRecorded(settingName: MappingSettingName): string | undefined {
+    if (this.lastSource === "keyboard") {
+      this.ensureKeyboardIsInit();
+    }
+    return getIconForLatestInput(this.configs, this.lastSource, this.selectedDevice, settingName);
+  }
+
+  getLastSourceDevice(): Device {
+    if (this.lastSource === "gamepad") {
+      return Device.GAMEPAD;
+    }
+    return Device.KEYBOARD;
+  }
+
+  getLastSourceConfig(): InterfaceConfig | null {
+    const sourceDevice = this.getLastSourceDevice();
+    if (sourceDevice === Device.KEYBOARD) {
+      this.ensureKeyboardIsInit();
+    }
+    return this.getActiveConfig(sourceDevice);
+  }
+
+  getLastSourceType(): string | undefined {
+    return this.getLastSourceConfig()?.padType;
+  }
+
+  /**
+   * Injects a custom mapping configuration into the configuration for a specific gamepad.
+   * If the device does not have an existing configuration, it initializes one first.
+   *
+   * @param selectedDevice The identifier of the device to configure.
+   * @param mappingConfigs The mapping configuration to apply to the device.
+   */
+  injectConfig(selectedDevice: string, mappingConfigs: InterfaceConfig): void {
+    if (!this.configs[selectedDevice]) {
+      this.configs[selectedDevice] = {} as InterfaceConfig;
+    }
+    // A proper way of handling migrating keybinds would be much better
+    const mappingOverrides = {
+      BUTTON_CYCLE_VARIANT: "BUTTON_CYCLE_TERA",
+    };
+    type MappingConfigKey = keyof typeof mappingConfigs.custom;
+    for (const key in mappingConfigs.custom) {
+      if (mappingConfigs.custom[key as MappingConfigKey] in mappingOverrides) {
+        // @ts-expect-error - TS narrows mappingConfigs.custom[key] to never for some reason
+        mappingConfigs.custom[key as MappingConfigKey] =
+          mappingOverrides[mappingConfigs.custom[key as MappingConfigKey] as keyof typeof mappingOverrides];
       }
     }
+    this.configs[selectedDevice].custom = mappingConfigs.custom;
+  }
+
+  resetConfigs(): void {
+    this.configs = {};
+    if (this.getGamepadsName()?.length > 0) {
+      this.setupGamepad();
+    }
+    this.setupKeyboard();
   }
 
   /**
-     * Checks if a specific button is currently locked.
-     *
-     * @param button - The button to check for a lock status.
-     * @returns `true` if the button is either of the two potentially locked buttons (`buttonLock` or `buttonLock2`), otherwise `false`.
-     *
-     * @remarks
-     * This method is used to determine if a given button is currently prevented from being processed due to a lock.
-     * It checks against two separate lock variables, allowing for up to two buttons to be locked simultaneously.
-     */
-  isButtonLocked(button: Button): boolean {
-    return (this.buttonLock === button || this.buttonLock2 === button);
-  }
-
-  /**
-     * Sets a lock on a given button if it is not already locked.
-     *
-     * @param button - The button to lock.
-     *
-     * @remarks
-     * This method ensures that a button is not processed multiple times inadvertently.
-     * It checks if the button is already locked by either of the two lock variables (`buttonLock` or `buttonLock2`).
-     * If not, it locks the button using the first available lock variable.
-     * This mechanism allows for up to two buttons to be locked at the same time.
-     */
-  setButtonLock(button: Button): void {
-    if (this.buttonLock === button || this.buttonLock2 === button) {
-      return;
+   * Swaps a binding in the configuration.
+   *
+   * @param config - The configuration object.
+   * @param settingName - The name of the setting to swap.
+   * @param pressedButton - The keycode of the button that was pressed.
+   */
+  assignBinding(config: CustomInterfaceConfig, settingName: MappingSettingName, pressedButton: number): boolean {
+    this.deactivatePressedKey();
+    if (config.padType === "keyboard") {
+      return assign(config, settingName, pressedButton);
     }
-    if (this.buttonLock === button) {
-      this.buttonLock2 = button;
-    } else if (this.buttonLock2 === button) {
-      this.buttonLock = button;
-    } else if (!!this.buttonLock) {
-      this.buttonLock2 = button;
-    } else {
-      this.buttonLock = button;
-    }
-  }
-
-  /**
-     * Releases a lock on a specific button, allowing it to be processed again.
-     *
-     * @param button - The button whose lock is to be released.
-     *
-     * @remarks
-     * This method checks both lock variables (`buttonLock` and `buttonLock2`).
-     * If either lock matches the specified button, that lock is cleared.
-     * This action frees the button to be processed again, ensuring it can respond to new inputs.
-     */
-  releaseButtonLock(button: Button): void {
-    if (this.buttonLock === button) {
-      this.buttonLock = null;
-    } else if (this.buttonLock2 === button) {
-      this.buttonLock2 = null;
-    }
+    return swap(config, settingName, pressedButton);
   }
 }

@@ -1,109 +1,42 @@
-<picture><img src="./public/images/logo.png" width="300" alt="PokéRogue"></picture>
+<!--
+SPDX-FileCopyrightText: 2024-2026 Pagefault Games
 
-PokéRogue is a browser based Pokémon fangame heavily inspired by the roguelite genre. Battle endlessly while gathering stacking items, exploring many different biomes, fighting trainers, bosses, and more! 
+SPDX-License-Identifier: CC-BY-NC-SA-4.0
+-->
+
+<div align="center"><picture><img src="https://github.com/pagefaultgames/pokerogue-assets/blob/beta/images/logo.png?raw=true" width="300" alt="PokéRogue"></picture>
+
+[![Discord Static Badge](https://img.shields.io/badge/Community_Discord-blurple?style=flat&logo=discord&logoSize=auto&labelColor=white&color=5865F2)](https://discord.gg/pokerogue)
+[![Test Coverage Endpoint Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Bertie690/9cdfc49361824d1d5a57b7e8b38855d8/raw/coverage-badge.json)](https://github.com/pagefaultgames/pokerogue/actions/workflows/tests.yml) \
+[![Docs Coverage Static Badge](https://pagefaultgames.github.io/pokerogue/beta/coverage.svg)](https://pagefaultgames.github.io/pokerogue/beta)
+[![Biome Linting Static Badge](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
+[![GNU AGPLv3 License Static Badge](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+</div>
+
+PokéRogue is a browser based Pokémon fangame heavily inspired by the roguelite genre. Battle endlessly while gathering stacking items, exploring many different biomes, fighting trainers, bosses, and more!
 
 # Contributing
-## 🛠️ Development
-If you have the motivation and experience with Typescript/Javascript (or are willing to learn) please feel free to fork the repository and make pull requests with contributions. If you don't know what to work on but want to help, reference the below **To-Do** section or the **#feature-vote** channel in the discord. 
 
-### 💻 Environment Setup
-#### Prerequisites
-- node: 20.13.1
-- npm: [how to install](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-
-#### Running Locally
-1. Clone the repo and in the root directory run `npm install`
-    - *if you run into any errors, reach out in the **#dev-corner** channel in discord*
-2. Run `npm run start:dev` to locally run the project in `localhost:8000`
-
-#### Linting
-We're using ESLint as our common linter and formatter. It will run automatically during the pre-commit hook but if you would like to manually run it, use the `npm run eslint` script. 
-
-### ❔ FAQ 
-
-**How do I test a new _______?**
-- In the `src/overrides.ts` file there are overrides for most values you'll need to change for testing
-
-
-## 🪧 To Do
-Check out our [Trello Board](https://trello.com/b/z10B703R/pokerogue-board) to see what we're working on
+See [CONTRIBUTING.md](./CONTRIBUTING.md), this includes instructions on how to set up the game locally.
 
 # 📝 Credits
-> If this project contains assets you have produced and you do not see your name here, **please** reach out.
 
-### 🎵 BGM
-  - Pokémon Mystery Dungeon: Explorers of Sky
-    - Arata Iiyoshi
-    - Hideki Sakamoto
-    - Keisuke Ito
-    - Ken-ichi Saito
-    - Yoshihiro Maeda
-  - Pokémon Black/White
-    - Go Ichinose
-    - Hitomi Sato
-    - Shota Kageyama
-  - Pokémon Mystery Dungeon: Rescue Team DX
-    - Keisuke Ito
-    - Arata Iiyoshi
-    - Atsuhiro Ishizuna
-  - Pokémon Black/White 2
-  - Firel (Custom Metropolis and Laboratory biome music)
-  - Lmz (Custom Jungle biome music)
+> If this project contains assets you have produced and you do not see your name, **please** reach out, either [here on GitHub](https://github.com/pagefaultgames/pokerogue/issues/new) or via [Discord](https://discord.gg/pokerogue).
 
-### 🎵 Sound Effects
-  - Pokémon Emerald
-  - Pokémon Black/White
+Thank you to all the wonderful people that have contributed to the PokéRogue project! You can find the credits [here](./CREDITS.md).
 
-### 🎨 Backgrounds
-  - Squip (Paid Commissions)
-  - Contributions by Someonealive-QN
+# Licensing
 
-### 🎨 UI
-  - GAMEFREAK
-  - LJ Birdman
+This repository seeks to be [REUSE compliant](https://reuse.software/): copyright and/or licensing information for each file is stored
+either in the file itself or in an associated `REUSE.toml` file.
 
-### 🎨 Pagefault Games Intro
-  - Spectremint
+The full licensing information for each file can be found by utilizing [REUSE's tooling](https://github.com/fsfe/reuse-tool), such as via `reuse spdx`. \
+An abbreviated summary of said information is as follows:
+- All source code belonging to the project, unless otherwise noted, is licensed under [AGPL-v3.0-only](LICENSES/AGPL-3.0-only.txt).
+- All forms of documentation (both Markdown files[^1] and any comments explicitly documenting source code) are licensed under [CC-BY-NC-SA-4.0](LICENSES/CC-BY-NC-SA-4.0.txt).
+- Auto-generated files produced by external tools or files of insignificant originality are not copyrighted and are licensed under [CC0-1.0](LICENSES/CC0-1.0.txt).
+- To the extent that the assets we provide are [licensable and applicable](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en#ref-exception-or-limitation), they are licensed under [CC-BY-NC-SA-4.0](LICENSES/CC-BY-NC-SA-4.0.txt) unless otherwise noted.
+  Exceptions can be found in associated `REUSE.toml` files.
+  - ⚠️ Files in `assets/` that are not explicitly licensed via `REUSE.toml` files should be considered to have _no_ licensing / copyright information.
 
-### 🎨 Game Logo
-  - Gonstar (Paid Commission)
-
-### 🎨 Trainer Sprites
-  - GAMEFREAK (Pokémon Black/White 2, Pokémon Diamond/Pearl)
-  - kyledove
-  - Brumirage
-  - pkmn_realidea (Paid Commissions)
-
-### 🎨 Trainer Portraits
-  - pkmn_realidea (Paid Commissions)
-
-### 🎨 Pokemon Sprites and Animation
-  - GAMEFREAK (Pokémon Black/White 2)
-  - Smogon Sprite Project (Various Artists)
-  - Skyflyer
-  - Nolo33
-  - Ebaru
-  - EricLostie
-  - KingOfThe-X-Roads
-  - kiriaura
-  - Caruban
-  - Sopita_Yorita
-  - Azrita
-  - AshnixsLaw
-  - Hellfire0raptor
-  - RetroNC
-  - Franark122k
-  - OldSoulja
-  - PKMarioG
-  - ItsYugen
-  - lucasomi
-  - Pkm Sinfonia
-  - Poki Papillon
-  - Fleimer_
-  - bizcoeindoloro
-  - mangalos810
-  - Involuntary-Twitch
-  - selstar
-
-### 🎨 Move Animations
-  - Pokémon Reborn
+[^1]: Including this README

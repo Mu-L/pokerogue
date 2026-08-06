@@ -1,22 +1,21 @@
-import BattleScene from "../battle-scene";
-import { PersistentModifier } from "../modifier/modifier";
-import { GeneratedPersistentModifierType, ModifierTypeGenerator, getModifierTypeFuncById } from "../modifier/modifier-type";
+import { globalScene } from "#app/global-scene";
+import { PersistentModifier } from "#modifiers/modifier";
+import type { GeneratedPersistentModifierType, ModifierType } from "#modifiers/modifier-type";
+import { getModifierTypeFuncById, ModifierTypeGenerator } from "#modifiers/modifier-type";
 
-export default class ModifierData {
-  private player: boolean;
-  private typeId: string;
-  private typeGeneratorId: string;
-  private typePregenArgs: any[];
-  private args: any[];
-  private stackCount: integer;
+export class ModifierData {
+  public player: boolean;
+  public typeId: string;
+  public typePregenArgs: any[];
+  public args: any[];
+  public stackCount: number;
 
   public className: string;
 
   constructor(source: PersistentModifier | any, player: boolean) {
-    const sourceModifier = source instanceof PersistentModifier ? source as PersistentModifier : null;
+    const sourceModifier = source instanceof PersistentModifier ? (source as PersistentModifier) : null;
     this.player = player;
     this.typeId = sourceModifier ? sourceModifier.type.id : source.typeId;
-    this.typeGeneratorId = sourceModifier ? sourceModifier.type.generatorId : source.typeGeneratorId;
     if (sourceModifier) {
       if ("getPregenArgs" in source.type) {
         this.typePregenArgs = (source.type as GeneratedPersistentModifierType).getPregenArgs();
@@ -29,25 +28,30 @@ export default class ModifierData {
     this.className = sourceModifier ? sourceModifier.constructor.name : source.className;
   }
 
-  toModifier(scene: BattleScene, constructor: any): PersistentModifier {
+  toModifier(_constructor: any): PersistentModifier | null {
     const typeFunc = getModifierTypeFuncById(this.typeId);
     if (!typeFunc) {
       return null;
     }
 
     try {
-      let type = typeFunc();
+      let type: ModifierType | null = typeFunc();
       type.id = this.typeId;
-      type.generatorId = this.typeGeneratorId;
 
       if (type instanceof ModifierTypeGenerator) {
-        type = (type as ModifierTypeGenerator).generateType(this.player ? scene.getParty() : scene.getEnemyField(), this.typePregenArgs);
+        type = (type as ModifierTypeGenerator).generateType(
+          this.player ? globalScene.getPlayerParty() : globalScene.getEnemyField(),
+          this.typePregenArgs,
+        );
       }
 
-      const ret = Reflect.construct(constructor, ([ type ] as any[]).concat(this.args).concat(this.stackCount)) as PersistentModifier;
+      const ret = Reflect.construct(
+        _constructor,
+        ([type] as any[]).concat(this.args).concat(this.stackCount),
+      ) as PersistentModifier;
 
-      if (ret.stackCount > ret.getMaxStackCount(scene)) {
-        ret.stackCount = ret.getMaxStackCount(scene);
+      if (ret.stackCount > ret.getMaxStackCount()) {
+        ret.stackCount = ret.getMaxStackCount();
       }
 
       return ret;

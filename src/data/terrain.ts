@@ -1,83 +1,145 @@
-import Pokemon from "../field/pokemon";
-import Move from "./move";
-import { Type } from "./type";
-import * as Utils from "../utils";
-import { IncrementMovePriorityAbAttr, applyAbAttrs } from "./ability";
-import { ProtectAttr } from "./move";
-import { BattlerIndex } from "#app/battle.js";
+import { getPokemonNameWithAffix } from "#app/messages";
+import type { Pokemon } from "#field/pokemon";
+import type { RGBArray } from "#types/sprite-types";
+import i18next from "i18next";
 
 export enum TerrainType {
   NONE,
   MISTY,
   ELECTRIC,
   GRASSY,
-  PSYCHIC
+  PSYCHIC,
+}
+
+export interface SerializedTerrain {
+  terrainType: TerrainType;
+  turnsLeft: number;
 }
 
 export class Terrain {
   public terrainType: TerrainType;
-  public turnsLeft: integer;
+  public turnsLeft: number;
+  public maxDuration: number;
 
-  constructor(terrainType: TerrainType, turnsLeft?: integer) {
+  constructor(terrainType: TerrainType, turnsLeft = 0, maxDuration: number = turnsLeft) {
     this.terrainType = terrainType;
-    this.turnsLeft = turnsLeft || 0;
+    this.turnsLeft = turnsLeft;
+    this.maxDuration = maxDuration;
   }
 
-  lapse(): boolean {
+  /**
+   * Tick down this terrain's duration.
+   * @returns Whether the current terrain should remain active (`turnsLeft > 0`)
+   */
+  public lapse(): boolean {
+    // TODO: Add separate flag for infinite duration terrains
     if (this.turnsLeft) {
       return !!--this.turnsLeft;
     }
 
     return true;
   }
+}
 
-  getAttackTypeMultiplier(attackType: Type): number {
-    switch (this.terrainType) {
+export function getTerrainName(terrainType: TerrainType): string {
+  switch (terrainType) {
+    case TerrainType.MISTY:
+      return i18next.t("terrain:misty");
     case TerrainType.ELECTRIC:
-      if (attackType === Type.ELECTRIC) {
-        return 1.3;
-      }
-      break;
+      return i18next.t("terrain:electric");
     case TerrainType.GRASSY:
-      if (attackType === Type.GRASS) {
-        return 1.3;
-      }
-      break;
+      return i18next.t("terrain:grassy");
     case TerrainType.PSYCHIC:
-      if (attackType === Type.PSYCHIC) {
-        return 1.3;
-      }
-      break;
-    }
-
-    return 1;
+      return i18next.t("terrain:psychic");
   }
 
-  isMoveTerrainCancelled(user: Pokemon, targets: BattlerIndex[], move: Move): boolean {
-    switch (this.terrainType) {
-    case TerrainType.PSYCHIC:
-      if (!move.getAttrs(ProtectAttr).length) {
-        const priority = new Utils.IntegerHolder(move.priority);
-        applyAbAttrs(IncrementMovePriorityAbAttr, user, null, move, priority);
-        return priority.value > 0 && user.getOpponents().filter(o => targets.includes(o.getBattlerIndex())).length > 0;
-      }
-    }
+  return "";
+}
 
-    return false;
+export function getTerrainColor(terrainType: TerrainType): RGBArray {
+  switch (terrainType) {
+    case TerrainType.MISTY:
+      return [232, 136, 200];
+    case TerrainType.ELECTRIC:
+      return [248, 248, 120];
+    case TerrainType.GRASSY:
+      return [120, 200, 80];
+    case TerrainType.PSYCHIC:
+      return [160, 64, 160];
+  }
+
+  return [0, 0, 0];
+}
+
+/**
+ * Return the message associated with a terrain effect starting.
+ * @param terrainType - The {@linkcode TerrainType} starting.
+ * @returns A string containing the appropriate terrain start text.
+ */
+export function getTerrainStartMessage(terrainType: TerrainType): string {
+  switch (terrainType) {
+    case TerrainType.MISTY:
+      return i18next.t("terrain:mistyStartMessage");
+    case TerrainType.ELECTRIC:
+      return i18next.t("terrain:electricStartMessage");
+    case TerrainType.GRASSY:
+      return i18next.t("terrain:grassyStartMessage");
+    case TerrainType.PSYCHIC:
+      return i18next.t("terrain:psychicStartMessage");
+    case TerrainType.NONE:
+    default:
+      terrainType satisfies TerrainType.NONE;
+      console.warn(`${terrainType} unexpectedly provided as terrain type to getTerrainStartMessage!`);
+      return "";
   }
 }
 
-export function getTerrainColor(terrainType: TerrainType): [ integer, integer, integer ] {
+/**
+ * Return the message associated with a terrain effect ceasing to exist.
+ * @param terrainType - The {@linkcode TerrainType} being cleared.
+ * @returns A string containing the appropriate terrain clear text.
+ */
+export function getTerrainClearMessage(terrainType: TerrainType): string {
   switch (terrainType) {
-  case TerrainType.MISTY:
-    return [ 232, 136, 200 ];
-  case TerrainType.ELECTRIC:
-    return [ 248, 248, 120 ];
-  case TerrainType.GRASSY:
-    return [ 120, 200, 80 ];
-  case TerrainType.PSYCHIC:
-    return [ 160, 64, 160 ];
+    case TerrainType.MISTY:
+      return i18next.t("terrain:mistyClearMessage");
+    case TerrainType.ELECTRIC:
+      return i18next.t("terrain:electricClearMessage");
+    case TerrainType.GRASSY:
+      return i18next.t("terrain:grassyClearMessage");
+    case TerrainType.PSYCHIC:
+      return i18next.t("terrain:psychicClearMessage");
+    case TerrainType.NONE:
+    default:
+      terrainType satisfies TerrainType.NONE;
+      console.warn(`${terrainType} unexpectedly provided as terrain type to getTerrainClearMessage!`);
+      return "";
   }
+}
 
-  return [ 0, 0, 0 ];
+/**
+ * Return the message associated with a terrain-induced move/effect blockage.
+ * @param pokemon - The {@linkcode Pokemon} being protected.
+ * @param terrainType - The {@linkcode TerrainType} in question
+ * @returns A string containing the appropriate terrain block text.
+ */
+export function getTerrainBlockMessage(pokemon: Pokemon, terrainType: TerrainType): string {
+  switch (terrainType) {
+    case TerrainType.MISTY:
+      return i18next.t("terrain:mistyBlockMessage", {
+        pokemonNameWithAffix: getPokemonNameWithAffix(pokemon),
+      });
+    case TerrainType.ELECTRIC:
+    case TerrainType.GRASSY:
+    case TerrainType.PSYCHIC:
+      return i18next.t("terrain:defaultBlockMessage", {
+        pokemonNameWithAffix: getPokemonNameWithAffix(pokemon),
+        terrainName: getTerrainName(terrainType),
+      });
+    case TerrainType.NONE:
+    default:
+      terrainType satisfies TerrainType.NONE;
+      console.warn(`${terrainType} unexpectedly provided as terrain type to getTerrainBlockMessage!`);
+      return "";
+  }
 }
